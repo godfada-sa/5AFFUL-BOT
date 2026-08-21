@@ -92,12 +92,15 @@ async function recheckAdmin(message, context) {
   }
 }
 
-// Commands that need the admin check fix
+// Only commands that are KNOWN broken (admin-gated but isAdmin/isBotAdmin fails in LID groups)
+// Commands like .tag, .del, .ship, .ginfo already work — do NOT include them.
 const NEEDS_FIX = new Set([
-  'mute', 'unmute', 'gpp', 'fullgpp', 'setdesc', 'setname',
-  'rejectall', 'acceptall', 'listrequest', 'del', 'tag',
-  'group', 'ship', 'ginfo', 'setgdesc', 'gdesc', 'setgname', 'gname',
-  'rejectjoin', 'acceptjoin', 'requestjoin', 'hidetag', 'delete', 'dlt',
+  'mute', 'unmute',
+  'gpp', 'fullgpp',
+  'setdesc', 'setname',
+  'setgdesc', 'gdesc', 'setgname', 'gname',
+  'rejectall', 'acceptall',
+  'listrequest', 'requestjoin', 'rejectjoin', 'acceptjoin',
 ]);
 
 function getConfigNames(config) {
@@ -151,17 +154,16 @@ if (typeof smd === 'function') {
 
       if (!names.some(n => NEEDS_FIX.has(n))) continue;
 
-      // Find the handler: it could be stored as any function property
+      // Find the handler function property (skip known non-handler keys)
+      const SKIP_KEYS = new Set(['filename', 'on', 'fromMe', 'pattern', 'cmdname', 'alias', 'type', 'category', 'desc', 'info', 'use', 'tag', 'react', 'only', 'dontAddCommandList', 'onLeave', 'onAdd']);
       let handlerKey = null;
       let origHandler = null;
       for (const key of Object.keys(cmd)) {
-        if (typeof cmd[key] === 'function' && key !== 'filename') {
-          // Check if this looks like a handler (has 2-3 params)
-          if (cmd[key].length <= 4) {
-            handlerKey = key;
-            origHandler = cmd[key];
-            break;
-          }
+        if (SKIP_KEYS.has(key)) continue;
+        if (typeof cmd[key] === 'function') {
+          handlerKey = key;
+          origHandler = cmd[key];
+          break;
         }
       }
 
