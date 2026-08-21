@@ -1,0 +1,483 @@
+{
+  "generatedAt": "2026-08-21T02:22:56.511Z",
+  "protectedFiles": [
+    {
+      "file": ".env.example",
+      "sha256": "2ba1f069522af9f812fe07f57e8bf5c2448581516086fa055362f51b14e28900",
+      "obfuscated": false
+    },
+    {
+      "file": ".npmrc",
+      "sha256": "2d2a164460fb5bcd1d8e4b4bab8dfd4b05680863a3f3af56aa4b2b016ef843cc",
+      "obfuscated": false
+    },
+    {
+      "file": "app.json",
+      "sha256": "37a626a380d05c0b217ca4888fd644aa6c2b7e49c0a4a79f72df806b6ed6fbb1",
+      "obfuscated": false
+    },
+    {
+      "file": "config.js",
+      "sha256": "8f35b7aded405963d3c8c5d90a1cd35b5872f38e201b1a871ab749b855db10c2",
+      "obfuscated": true
+    },
+    {
+      "file": "index.js",
+      "sha256": "2064d0ec7d9f4ae8e7e4476b83bfdfcd3cfff06d12c5318b734c4917c5e9f3c0",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/assets/index.html",
+      "sha256": "344525edc7c61209bfaaa938492a0ff9af5134ddae7f0d1cd34802120bfae9b2",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/assets/pk.jpg",
+      "sha256": "09f208e03b495417fa83effa36493a5c430000744a210be23005a116d6a1dd1a",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/assets/safful-menu.jpg",
+      "sha256": "a4094acb3c54fa548fb6ef5fef9bd17782dc607382d8323adf52e9626d4fd570",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/assets/Suhail MD",
+      "sha256": "6d7a37e2a096c0a6181f9f5284a023d3ef6d88b9bda03b90288ff8172d027ab4",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/assets/suhail.jpg",
+      "sha256": "b1e11cda5c80c700e7edf1a1a54fc8170325e18767631c969ee05d6db2641437",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/assets/suhail_old.jpg",
+      "sha256": "b1e11cda5c80c700e7edf1a1a54fc8170325e18767631c969ee05d6db2641437",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/brand-console.js",
+      "sha256": "150284eb16b2f3a8521cadb61ce54ff2d4fd9007993a76383c8ee4d27dca10c1",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/class/init.js",
+      "sha256": "334a37a7209039038ce5881e44ec539d335126eba49791c530a19e190c2b130d",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/database/alive.js",
+      "sha256": "085d3997e960ebd8dff7c4d952e19fe46bd1dfe93cf7f225015b85a02fe40620",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/database/group.js",
+      "sha256": "cae87f82efe794add47fd40209c188f547050e15377ffa16c36688a8f571674d",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/database/tempdb.js",
+      "sha256": "87ed157bb0714925f70e7e6769bfc122e17db2b43a2a5216d409a2d401d317ff",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/database/user.js",
+      "sha256": "00c8295416c7fe58521b87051fcf4890f0618851f93a4d17adf7d4ef0da2e1cd",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/exif.js",
+      "sha256": "d7fe767d0857b2247282d7db49c594ab554ece11e9674c4b5e32a138b5efc544",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/index.js",
+      "sha256": "914b4e879c97cbd83eddb7c305d357d50e10296c88a9ce842d923b16801b76ba",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/koyeb.js",
+      "sha256": "b257ccc0def945ca2010da9e84c6975d1e4e3137a550db2d4577d1970c96d09e",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/plugins.js",
+      "sha256": "04c092f8c1c8acfc3484081eecb2c39aceeb8bce324788a7cff194449eff2ffa",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-auth-method.js",
+      "sha256": "a13738af1d753396d194ed2780f85b4a7c4f2fffeec6edd55e5013f41f299fb8",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-auth-recovery.js",
+      "sha256": "a6ce0efb252b9b22b0857497dfd2b1c88ced30425b3114e319047ae74c314868",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-history-mode.js",
+      "sha256": "780b106095e1e9cecf1e3ea9ba37d67cece6c564e200262b93b0d39a6227d58f",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-mobile-notifications.js",
+      "sha256": "d133609c40d4999f9fe3245109c54dcec45ba1db880c1aa50efa5237f6ae3726",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-mode.js",
+      "sha256": "fd3f6f338159990d073bc68855896b8423161b231c7512cdfcff5d9cbca5a404",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-optional-sharp.js",
+      "sha256": "362ce15d3b338e26e85f145875ed52c69cc7a9e67de11c1c2391d62c7b0b227c",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-outgoing-message-policy.js",
+      "sha256": "492cb7fcdb3407fbaba17aa77a2992d8ef9a2ac91e68874acc098536c604c01b",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-pairing-bootstrap.js",
+      "sha256": "1aa8d93f85ce097121594f54726bcae133767b1d4e8936db7afc915929381085",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-protection.js",
+      "sha256": "0375f2a6514011fb72d6a188a4bf0a3e1aefb079377c61a939929ed13577f2f7",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-raw-dispatcher.js",
+      "sha256": "57a52ac777d8bf3f9637105cb5e76637e88da3ddfd8823b29333b6470e7a66ef",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-responsive-qr.js",
+      "sha256": "58acbe9e26482fe70895d10db4b75124b4db60e93f1b2f921eb66f41791874c6",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-status-save.js",
+      "sha256": "d265f7417b5f4aafd4a06c7987db1e3f2359a218d23bb156900e6a43b1e771f5",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/safful-ytdlp.js",
+      "sha256": "869b35c544389a20c18ca41a7bea8114468a56eb9f75b28c0f330b4bfac3ae3b",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/schemes.js",
+      "sha256": "8f6a544a82e9df4a48f73d2fa80e2db150bfeb97ccf72c56b3c4a5b4e06e3ce6",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/scraper.js",
+      "sha256": "17319e88dc77f7028872144a8ec55ecd6eb809f2097551357319133407bee1b3",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/serialized.js",
+      "sha256": "b6b75ba601343e7900cb8348d31d172a7e8f8c3ec26f3fdf32f01725c98037bc",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/smd.js",
+      "sha256": "b1dee0ed2b9065a541b8970c5b6d33310d076e3e6490577ecd85846b82fba6d6",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/start.sh",
+      "sha256": "10cd493cc6d343a74f13f3469f593435172e43b530dec735733154764f695598",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/store-shim.js",
+      "sha256": "6d8c936e97f38cb9cb1dcdeef1517d42bd24670df98f9cedd5df4ff83c187614",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/stylish-font.js",
+      "sha256": "0b293199b24d12b5c0076a9984a9c4a14f5c6ba730c50f0403516a387cd44add",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/suhail.js",
+      "sha256": "3dcd5fabb0fe2de5ed11065eaca73fc29f36ee651ab40bd822ac2b72a3fe7fe8",
+      "obfuscated": true
+    },
+    {
+      "file": "lib/ttt.d.ts",
+      "sha256": "fb7f3ca106c510c6e2567c91bccfa831bf2807192b6c3a0ea3fef2c1c332dfec",
+      "obfuscated": false
+    },
+    {
+      "file": "lib/ttt.js",
+      "sha256": "8a114e1e7d78ef99f061a1b55f9583da01869a6519a74ecfc1317a6127888baf",
+      "obfuscated": true
+    },
+    {
+      "file": "LICENSE",
+      "sha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+      "obfuscated": false
+    },
+    {
+      "file": "patch-baileys-version.js",
+      "sha256": "7fd83bb373fbe0583ab7e98616eee0c8f77cf5107b71427aa404910fdc295a1c",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/all.js",
+      "sha256": "4771cef57cdcfc1ba5090618911d8f6b16701f1e5354a49c4c953d4981b13797",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/astatus.js",
+      "sha256": "576056cdeb4f4a995d473ce10ed9ef917e3bb94a460a43f39e5131ffe710f5d7",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/autoview.js",
+      "sha256": "cc0c34c1166ba25b7f6c0fa1d64bac017d3200c389a3479746d5c3b7f37c50fa",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/broadcast.js",
+      "sha256": "90766dcc022482646a71d79e42dbd76ac695558cc03068d024462e09c693e35c",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/chats.smd",
+      "sha256": "014e925eaf7bb8e3c99e9f5a3ece9c538ef5b7bfa71242b3c70c6b61789b5850",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/converter.smd",
+      "sha256": "a8ee95dfd3dfcd3fafcf5c4b5886f572e9f87942ade00eb31aab9c77df27df28",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/core.js",
+      "sha256": "7438a56f394f7c3d97129271be0188a7994711b687d5f3bd2c850f5cd7df65f4",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/delete.js",
+      "sha256": "c5aea414fbdc43375d224e99e5ae87350c47d100be90f730fe06afb584e43499",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/downloader.smd",
+      "sha256": "acdbf00caf48f1aaa0c32c30710d05216c8424e5dde016e740cce8a01f40bbb5",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/economy.smd",
+      "sha256": "6b999a16f139b71afbe053a4460692a036e877399fe08a4c3328820fca1fc75d",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/editorpack.smd",
+      "sha256": "94ad0920a2333730753918938362bff6f0a02c23fbb64fa0c718d6db08e62c87",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/fun.smd",
+      "sha256": "18cee96f85521e219a7dbe5d19b35cf8a791c6780bcea706e46b06ef385124a0",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/git-init.js",
+      "sha256": "6675c397ae0ac54bf0ca1c1d17e3df4f792c4ff7014c7a27b6b84a922c3cc73f",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/group.smd",
+      "sha256": "2de9dbd55e5cedcdb0fe3bf6f0c29982409b5258b051fa772950326f96d99817",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/kk.js",
+      "sha256": "7d1e210af3861acb6456b7bf028848f4a5ed164cd69ffb8a77507f4ca745d429",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/menu.js",
+      "sha256": "fadb01b264b95fbfa94bb47661d6fa22e659ea97fe66ee1aa449271cbbac8d2d",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/mode.js",
+      "sha256": "08ed18a2eb78dcef5a136d55598b77df95ce2b584706d3aedb1e1d07c45373fc",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/owner-tools.js",
+      "sha256": "df898523b9506aa647018c313e1ae876923bbfc5d12e908e952757eecf4dd2b3",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/protection.js",
+      "sha256": "8d563a334e43d3c9b73d7bb22b29fa4d010540eadfa1632db08198de3002d2f3",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/qr.js",
+      "sha256": "dc689034d5560ecd629d94b6ff87b1c6bef8c7af2525c79281fa7726212122d7",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/save.js",
+      "sha256": "d491cddcf49a80e040dc92ebca1a672db4e4195deca8f0e58473079857b54ce8",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/savestatus.js",
+      "sha256": "c38e2ce3b38126b988c08aa365f90bbebf13f8c6b0bf56d526e570d76489c3a9",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/statusauto.smd",
+      "sha256": "99ebd13c7eb058a96299e23b5451ed019518132926cdcf7a7b6d90ecc03cf588",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/tagnotadmin.js",
+      "sha256": "f139c1ebfd39a36075df82cd6503da7ee406cfdf2f6e41a086fc0f580a4e88b2",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/tiktok.js",
+      "sha256": "8df926305397433919e568cc646553b80e08f648fe78a6c8b90a9dd09da7fa03",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/tkick.js",
+      "sha256": "36d33fd5edc73215ab829a6f9fff22a0f9451df5402c9de18af09c3036851199",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/user.smd",
+      "sha256": "bf4e8c6724ad9b42a6020a3b3a410dc1bc0fc3fa68ac9b6b69ab7239af8cbf82",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/x.js",
+      "sha256": "deb40677bdadbfde376480251b7fc32af3bf576c7a9380853b96d28895275121",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/zz-safful-command-prune.js",
+      "sha256": "45f88f96bc4e53c14002769d9f5d3da520f9eb2f608f868bb85226290a5877ba",
+      "obfuscated": true
+    },
+    {
+      "file": "plugins/zzzz-safful-song.js",
+      "sha256": "6a1a97e9f3c274541f76e8e8c1c30f757572e437eb598d28e8bbbead778ddc9b",
+      "obfuscated": true
+    },
+    {
+      "file": "Procfile",
+      "sha256": "9a60b641efd6ab7bd602b702f0f69e5bc9bd4c8092fcc89b30c2dc3cd361d428",
+      "obfuscated": false
+    },
+    {
+      "file": "README.md",
+      "sha256": "10b594554cfbd3d6abcb1caf985f087717f6c550162b9ed71deff590f8675e14",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/ADAM.json",
+      "sha256": "66c2d3075400a0c8178e7db2ef5e324de7a62805bbd59ca6e5865a57f6020ecd",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/AYANOKOJI.json",
+      "sha256": "4bc5b5e0afead1c4e86b793b9af5629a8935e1f63e53828d48c4fd704b57b8a0",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/EDITH.json",
+      "sha256": "90c84b905d6c9bdbbbb8c089ed6f039e16561795f14717dc8807a581f421f2b4",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/FRIDAY.json",
+      "sha256": "863f5c4db69f2808d009bd24321975a5c2e769d3c38c46f59982e9d1a286e970",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/GENOS.json",
+      "sha256": "0342e770622e6bcca800e4929fd61dc601d0ac6418708a95839094b96064f56e",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/GIDEON.json",
+      "sha256": "6a928615f91d5867179b3b84713316c4b700f4d075f0992452f0b85d8302d805",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/GOJO.json",
+      "sha256": "88b9679aa172b9b2fdca829dbc1ee5ad9437013dc97a68cbf2229dc17de37edb",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/GOKU.json",
+      "sha256": "49381336a650cae49f17b2231d9acba518472d2c8293b0c4dce44a15e275148a",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/LUFFY.json",
+      "sha256": "110ecb2cdfbbdd338d435c8f8d1818d468cbc21a7a38ce721dd83f2998d8b5c2",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/NARUTO.json",
+      "sha256": "9876fc57a9344323b965ab654b95f56336a045b82f876287ddc43c82544ad0c3",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/NEZUKO.json",
+      "sha256": "2a775b0a4ebacc417972f75f3bb9f21b03cb591d837085ac591348de11efc14a",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/PARKER.json",
+      "sha256": "7493db6fd95657764b0861d3c5748bc5c423ffc96ffd456abd8e3f2ee2c51453",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/SAFFUL.json",
+      "sha256": "b2498bfbe7350239fd9c12997cc07d39ea60d7fce7d5c3c502c3ddce4a25dece",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/SECKTOR.json",
+      "sha256": "fe8e072d5d2d30fbb297ab59c935973ff52992ef86f104bb6588f2cc93735f13",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/SUHAIL.json",
+      "sha256": "db068bf0942c948090c46fcacf22d8fe1a663a2f364faafde892949d279fcbdc",
+      "obfuscated": false
+    },
+    {
+      "file": "Themes/ZEROTWO.json",
+      "sha256": "29ff8d0a674fd08a703cb57957a462be5e339fee8593d82a936be63f2eaa8ba6",
+      "obfuscated": false
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "d09b44fde1fa59ef109ddfc02528111686cd1fe1f2d5a97e3a072e1c9834f50d",
+      "obfuscated": false,
+      "generated": true
+    }
+  ],
+  "privateCookiesIncluded": true,
+  "notice": "This private deployment release contains obfuscated runtime code and a YouTube authentication cookie file. Never publish or share it."
+}
