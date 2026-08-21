@@ -18,7 +18,7 @@ npm start
 
 The first launch starts a new WhatsApp pairing flow. Once linked, normal
 restarts automatically retain the local credentials. To link a different
-account, stop the bot and remove only `lib/Suhail_Baileys` before starting it.
+account, stop the bot and remove only `lib/Safful_Baileys` before starting it.
 
 ## Ubuntu AWS deployment
 
@@ -40,7 +40,7 @@ connections and the local HTTP server is only for process diagnostics.
    retained automatically.
 
 For each additional WhatsApp account, create a new clone, `.env`, port, and
-systemd service. Never copy another bot's `lib/Suhail_Baileys` credentials.
+systemd service. Never copy another bot's `lib/Safful_Baileys` credentials.
 
 ## Security
 
