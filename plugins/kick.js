@@ -1,5 +1,17 @@
-const { cmd } = require('../lib');
+const { cmd, commands } = require('../lib');
 const { sleep } = require('sleep-promise');
+
+// Remove the broken .kick command from group.smd so it doesn't intercept
+setImmediate(() => {
+  const brokenKickIdx = commands.findIndex(c => {
+    const names = [c.pattern, ...(Array.isArray(c.alias) ? c.alias : []), ...(Array.isArray(c.cmdname) ? c.cmdname : [])].map(n => String(n || '').toLowerCase().trim());
+    return names.includes('kick') && String(c.filename || '').includes('group.smd');
+  });
+  if (brokenKickIdx !== -1) {
+    commands.splice(brokenKickIdx, 1);
+    console.log('[kick.js] Removed broken .kick command from group.smd');
+  }
+});
 
 // Same admin check pattern as tkick.js (the fixed version)
 function isOwnerOrAdmin(msg, ctx) {
