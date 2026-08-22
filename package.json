@@ -58,6 +58,7 @@
     "secktor-pack": "latest",
     "sharp": "^0.32.6",
     "simple-git": "^3.15.1",
+    "soundcloud-scraper": "^5.0.3",
     "translatte": "^3.0.1",
     "util": "^0.12.4",
     "wa-sticker-formatter": "^4.3.2",
