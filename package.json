@@ -12,6 +12,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",
+    "@distube/ytdl-core": "^4.16.12",
     "@hapi/boom": "^9.1.4",
     "@whiskeysockets/baileys": "7.0.0-rc14",
     "acrcloud": "^1.4.0",
@@ -49,6 +50,7 @@
     "pastebin-js": "latest",
     "path": "^0.12.7",
     "pg": "^8.11.3",
+    "play-dl": "^1.9.7",
     "pm2": "^5.2.0",
     "pngjs": "^7.0.0",
     "puppeteer": "latest",
