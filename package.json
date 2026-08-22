@@ -59,6 +59,8 @@
     "translatte": "^3.0.1",
     "util": "^0.12.4",
     "wa-sticker-formatter": "^4.3.2",
+    "xml2js": "^0.6.2",
+    "xmlbuilder": "^15.1.1",
     "youtubei.js": "9.4.0",
     "ytdl-secktor": "npm:@distube/ytdl-core"
   },
