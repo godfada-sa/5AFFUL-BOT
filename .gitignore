@@ -1,0 +1,31 @@
+node_modules/
+.safful-temp/
+.safful-secrets/
+.freebuff/
+_freebuff/
+_plugin-sources/
+_5afful/
+_silentwolf/
+.git/
+temp/
+__pycache__/
+
+# Build tools
+build.py
+obfuscate-plugins.js
+verify-plugins.js
+extract-sw-commands.js
+analyze-sw.js
+sandbox-sw.js
+decode-wolf.js
+analyze-uptime.js
+
+# Readable backup sources
+*.readable
+
+# Zip files
+*.zip
+
+# Large binaries
+*.exe
+*.msi
