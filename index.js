@@ -81,6 +81,7 @@ require(__dirname + '/lib/safful-history-mode')
 require(__dirname + '/lib/safful-responsive-qr').installResponsiveQrPage()
 require(__dirname + '/lib/safful-rename-session')
 require(__dirname + '/lib/safful-fork-bypass')
+const sessionGuard = require(__dirname + '/lib/safful-session-guard')
 const { installOutgoingMessagePolicy, rebrandSocket } = require(__dirname + '/lib/safful-outgoing-message-policy')
 installOutgoingMessagePolicy()
 const preserveMobileNotifications = require(__dirname + '/lib/safful-mobile-notifications')
@@ -151,7 +152,57 @@ function connectedBannerText() {
   let database = 'JSON(no db)'
   if (/^mongodb/i.test(dbUrl)) database = 'MongoDB'
   else if (/^postgres/i.test(dbUrl)) database = 'PostgreSQL'
-  return ['Safful-Md Connected', '', `  Prefix  : [ ${prefix} ]`, `  Plugins : ${pluginCount}`, `  Mode    : ${mode}`, `  Database: ${database}`].join('\n')
+  // Style: Anonymous hacker mask connected message
+  const now = new Date()
+  const time = now.toLocaleString('en-US', { timeZone: 'Africa/Accra', hour: '2-digit', minute: '2-digit', hour12: true })
+  const date = now.toLocaleDateString('en-US', { timeZone: 'Africa/Accra', weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
+  const uptime = process.uptime()
+  const h = Math.floor(uptime / 3600)
+  const m = Math.floor((uptime % 3600) / 60)
+  const upStr = h > 0 ? h + 'h ' + m + 'm' : m + 'm'
+  const memMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
+
+  return [
+    '',
+    '*ambique*',
+    '',
+    '*◆━━━━━━━━━━━━━━━━━━━━━━━━━━━◆*',
+    '',
+    '*┌──────────────────────────────┐*',
+    '*│                              │*',
+    '*│      ╔══╗  ╔══╗  ╔══╗       │*',
+    '*│      ║██║  ║██║  ║██║       │*',
+    '*│      ║██║  ║██║  ║██║       │*',
+    '*│      ╚══╝  ╚══╝  ╚══╝       │*',
+    '*│                              │*',
+    '*│    ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓     │*',
+    '*│    ▓  S A F F U L - M D  ▓     │*',
+    '*│    ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓     │*',
+    '*│                              │*',
+    '*└──────────────────────────────┘*',
+    '',
+    '*◆━━━━━━━━━━━━━━━━━━━━━━━━━━━◆*',
+    '',
+    '*📍 Connection Status:  [ONLINE]*',
+    '*🔐 Security:           [ACTIVE]*',
+    '*🛡️ Protection:         [ARMED]*',
+    '*⚡ Engine:              [BAILEYS v7]*',
+    '',
+    `*⏰ Time:* ${time} — ${date}`,
+    `*⏱️ Uptime:* ${upStr}`,
+    `*💾 Memory:* ${memMB} MB`,
+    `*🔧 Prefix:* ${prefix}`,
+    `*📦 Plugins:* ${pluginCount}`,
+    `*⚙️ Mode:* ${mode}`,
+    `*🗄️ Database:* ${database}`,
+    '',
+    '*◆━━━━━━━━━━━━━━━━━━━━━━━━━━━◆*',
+    '',
+    '_The moon watches... The bot is alive._',
+    '',
+    '*🤖 SAFFUL-MD* • _powered by Safful Tech_',
+    '',
+  ].join('\n')
 }
 
 function sudoRecipient() {
@@ -163,24 +214,34 @@ function sudoRecipient() {
 function notifyConnectedOnce(socket) {
   if (connectedBannerSent || !socket?.ev?.on || typeof socket?.sendMessage !== 'function') return
   const recipient = sudoRecipient()
-  if (!recipient) { process.stdout.write('[connect-banner] no sudo number configured, skipping\n'); return }
-  let warnedWaiting = false
+  if (!recipient) return
+  let isConnectionOpen = false
+  let sendAttempts = 0
+  const maxAttempts = 30
   const liveSocket = () => (global.__saffulLatestSocket && typeof global.__saffulLatestSocket?.sendMessage === 'function' ? global.__saffulLatestSocket : socket)
   const sendBanner = async () => {
     if (connectedBannerSent) return
+    if (!isConnectionOpen) return
     const current = liveSocket()
-    if (!current?.user?.id) { if (!warnedWaiting) { warnedWaiting = true; process.stdout.write('[connect-banner] waiting for logged-in session before sending\n') } return false }
+    if (!current?.user?.id) return
+    sendAttempts += 1
     try {
-      process.stdout.write(`[connect-banner] sending connected message to ${recipient}\n`)
       await current.sendMessage(recipient, { text: connectedBannerText() })
       connectedBannerSent = true
-      process.stdout.write('[connect-banner] connected message sent to sudo once\n')
-      return true
-    } catch (error) { process.stdout.write(`[connect-banner] send failed, will retry: ${error?.message || error}\n`); return false }
+    } catch {}
   }
-  socket.ev.on('connection.update', ({ connection } = {}) => { if (connection === 'open') void sendBanner() })
-  let attempts = 0
-  const retry = setInterval(() => { attempts += 1; if (connectedBannerSent || attempts > 15) { clearInterval(retry); return }; void sendBanner() }, 4000)
+  socket.ev.on('connection.update', ({ connection } = {}) => {
+    if (connection === 'open') {
+      isConnectionOpen = true
+      setTimeout(() => void sendBanner(), 3000)
+    } else {
+      isConnectionOpen = false
+    }
+  })
+  const retry = setInterval(() => {
+    if (connectedBannerSent || sendAttempts >= maxAttempts) { clearInterval(retry); return }
+    void sendBanner()
+  }, 5000)
   retry.unref?.()
 }
 
@@ -189,6 +250,8 @@ const start = async () => {
   let bot
   let lastConnectionState = ''
   try {
+    // Restore session from PostgreSQL before auth prep
+    try { await sessionGuard.restoreSession() } catch {}
     await prepareAuthentication()
     if (global.__saffulAuthMethod === 'existing') clearRecoveryState()
     process.stdout.write(`[boot] auth method: ${global.__saffulAuthMethod || 'unknown'} (pairing number: ${global.__saffulPairingNumber || 'n/a'})\n`)
@@ -217,7 +280,59 @@ const start = async () => {
 
     bootPhase = 'core-load'
     process.stdout.write('[boot] loading core module…\n')
+    // Install temporary SPECTER banner catcher before smd.js loads
+    const __preSmdWrite = process.stdout.write.bind(process.stdout)
+    const __preSmdLog = console.log.bind(console)
+    const specterCatch = (text) => /SPECTER|MULTIDEVICE.*WHATSAPP.*USER.*BOT/i.test(text)
+    const blockCatch = (text) => /[╔╗╚╝║═]{4,}/.test(text)
+    process.stdout.write = function(chunk, ...rest) {
+      const t = typeof chunk === 'string' ? chunk : String(chunk)
+      if (specterCatch(t) || blockCatch(t)) return true
+      return __preSmdWrite(chunk, ...rest)
+    }
+    console.log = function(...args) {
+      const t = args.map(a => typeof a === 'string' ? a : String(a)).join(' ')
+      if (specterCatch(t) || blockCatch(t)) return
+      return __preSmdLog(...args)
+    }
     bot = require(__dirname + '/lib/smd')
+    // Restore proper brand interceptors
+    try {
+      const bc = require(__dirname + '/lib/brand-console')
+      if (process.__saffulStdoutInterceptor) process.stdout.write = process.__saffulStdoutInterceptor
+      if (process.__saffulStderrInterceptor) process.stderr.write = process.__saffulStderrInterceptor
+      if (process.__saffulConsoleLogInterceptor) console.log = process.__saffulConsoleLogInterceptor
+    } catch {}
+    // Load custom .js plugins explicitly
+    const _ep = ['hacking-tools','auto-moderation','privacy-commands','ig-download','sports-live','snap-download','pin-download','spotify-download','zzzz-safful-song','yt-download','antiviewonce']
+    for (const p of _ep) { try { require(__dirname + '/plugins/' + p) } catch (e) { process.stdout.write('[plugin] ' + p + ' err: ' + e.message + '\n') } }
+    // Print QR to console when smd.js generates it (raw write — bypasses log filter)
+    // Responsive: compact margin + auto-centering to the live terminal width
+    try {
+      const qrcode = require('qrcode');
+      const rawOut = process.__saffulRawStdout || process.stdout.write.bind(process.stdout);
+      let _lastQr = '';
+      const printQr = () => {
+        if (!global.qr || global.qr === _lastQr) return
+        _lastQr = global.qr;
+        qrcode.toString(global.qr, {
+          type: 'terminal',
+          small: true,      // half-blocks → half the height, stays square
+          margin: 1,        // tight quiet zone → fits narrow screens
+        }, (err, str) => {
+          if (err || !str) return;
+          const cols = process.stdout.columns || 80;
+          const lines = str.split('\n');
+          // Measure VISIBLE width (strip ANSI escape codes) for correct centering
+          const visibleLen = (l) => l.replace(/\x1b\[[0-9;]*m/g, '').length;
+          const qrWidth = Math.max(...lines.map(visibleLen));
+          const pad = qrWidth < cols ? Math.floor((cols - qrWidth) / 2) : 0;
+          const centered = lines.map((l) => ' '.repeat(pad) + l).join('\n');
+          rawOut('\n  ── Scan this QR with WhatsApp ──\n\n' + centered + '\n');
+        });
+      };
+      setInterval(printQr, 2000).unref();
+    } catch (qrErr) { process.stdout.write('[boot] QR watcher failed: ' + qrErr.message + '\n') }
     process.stdout.write('[boot] core loaded\n')
     console.log(`Safful ${VERSION}`)
 
@@ -240,6 +355,7 @@ const start = async () => {
     } catch (probeError) { process.stdout.write(`[boot] WARNING: cannot reach web.whatsapp.com — ${probeError?.message || probeError}\n`) }
 
     const socket = await bot.connect()
+    sessionGuard.hookSocket(socket)
     process.stdout.write('[boot] socket created\n')
 
     const reportConnection = (update = {}) => {
@@ -263,6 +379,48 @@ const start = async () => {
     attachRawDispatcher(socket, { attachProtection, autoView, statusSave })
     notifyConnectedOnce(socket)
     process.stdout.write('[boot] hooks attached — ready\n')
+
+    // Register after the raw dispatcher so view-once wrappers are inspected
+    // before the normal command serializer unwraps them.
+    try {
+      require(__dirname + '/plugins/antiviewonce').attach(socket)
+    } catch (e) { process.stdout.write('[avo] Hook failed: ' + (e.message || e) + '\n') }
+
+    // ── Auto-Moderation Hooks ────────────────────────────────────────────
+    try {
+      const automodPath = require('path').join(__dirname, '.safful-temp', 'automod.json')
+      const automodFs = require('fs')
+      const automodEvent = 'messages.upsert'
+      socket.ev?.on?.(automodEvent, async ({ messages }) => {
+        try {
+          if (!messages || !messages.length) return
+          let automodState = {};
+          try { automodState = JSON.parse(automodFs.readFileSync(automodPath, 'utf8') || '{}') } catch {}
+          for (const msg of messages) {
+            if (msg?.key?.fromMe) continue
+            const chatId = String(msg?.key?.remoteJid || '')
+            const chatNum = chatId.split('@')[0].replace(/[^0-9]/g, '')
+            const msgType = Object.keys(msg?.message || {})[0]
+            let shouldDelete = false
+            if (msgType === 'stickerMessage' && automodState['antisticker:' + chatNum]) shouldDelete = true
+            if (msgType === 'imageMessage' && automodState['antiimage:' + chatNum]) shouldDelete = true
+            if (msgType === 'videoMessage' && automodState['antivideo:' + chatNum]) shouldDelete = true
+            if (automodState['antibadword:' + chatNum]) {
+              const body = msg?.message?.conversation || msg?.message?.extendedTextMessage?.text || ''
+              const words = automodState['badwords:' + chatNum] || []
+              for (const w of words) { if (body.toLowerCase().includes(w)) { shouldDelete = true; break } }
+            }
+            if (shouldDelete && msg?.key) {
+              try {
+                await socket.sendMessage(chatId, { delete: msg.key })
+                process.stdout.write('[automod] Deleted ' + msgType + ' from ' + chatNum + '\n')
+              } catch (e) { process.stdout.write('[automod] Delete failed: ' + e.message + '\n') }
+            }
+          }
+        } catch {}
+      })
+      process.stdout.write('[automod] Auto-moderation hooks installed\n')
+    } catch (e) { process.stdout.write('[automod] Hook failed: ' + e.message + '\n') }
 
     // Uptime Guardian activation
     const RECONNECTABLE_CODES = new Set([408, 515])
@@ -299,4 +457,56 @@ const start = async () => {
     setTimeout(() => void start(), 3000).unref?.()
   }
 }
+
+// ── Stability: SIGTERM/SIGINT clean shutdown ──────────────────────────
+function cleanShutdown(signal) {
+  process.stdout.write(`[uptime] ${signal} received — cleaning up...\n`)
+  try { if (typeof sessionGuard?.backupNow === 'function') sessionGuard.backupNow() } catch {}
+  try {
+    const sock = global.__saffulLatestSocket
+    if (sock && typeof sock.end === 'function') sock.end()
+  } catch {}
+  process.stdout.write('[uptime] Shutdown complete\n')
+  process.exit(0)
+}
+process.on('SIGTERM', () => cleanShutdown('SIGTERM'))
+process.on('SIGINT', () => cleanShutdown('SIGINT'))
+
+// ── Stability: Express health endpoint for Pterodactyl ────────────────
+try {
+  const http = require('http')
+  const healthPort = parseInt(process.env.PORT || '0') || 8080
+  const healthServer = http.createServer((req, res) => {
+    if (req.url === '/health' || req.url === '/') {
+      const isAlive = lastConnectionState === 'open'
+      res.writeHead(isAlive ? 200 : 503, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({
+        status: isAlive ? 'ok' : 'disconnected',
+        connection: lastConnectionState,
+        uptime: Math.floor(process.uptime()),
+        memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        bot: 'Safful-MD',
+      }))
+    } else {
+      res.writeHead(404)
+      res.end('Not Found')
+    }
+  })
+  healthServer.listen(healthPort, '0.0.0.0', () => {
+    process.stdout.write(`[health] Health server on http://0.0.0.0:${healthPort}/health\n`)
+  })
+  healthServer.on('error', (e) => {
+    process.stdout.write('[health] Could not start health server: ' + e.message + '\n')
+  })
+} catch {}
+
+// ── Stability: WhatsApp connection watchdog ────────────────────────────
+setInterval(() => {
+  try {
+    if (lastConnectionState !== 'open') {
+      process.stdout.write('[watchdog] WhatsApp not connected (state: ' + lastConnectionState + ') — will auto-reconnect\n')
+    }
+  } catch {}
+}, 5 * 60 * 1000)
+
 start()
