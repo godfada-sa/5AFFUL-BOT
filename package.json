@@ -6,7 +6,12 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node --expose-gc index.js"
+    "start": "node --expose-gc index.js",
+    "test:commands": "node scripts/test-command-reliability.js",
+    "test:update": "node scripts/test-update-session.js"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   },
   "author": "Safful",
   "license": "Apache-2.0",

@@ -1,6 +1,9 @@
 node_modules/
 .safful-temp/
+.safful-data/
 .safful-secrets/
+lib/Safful_Session/
+lib/Suhail_Baileys
 .freebuff/
 _freebuff/
 _plugin-sources/

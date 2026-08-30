@@ -18,7 +18,16 @@ npm start
 
 The first launch starts a new WhatsApp pairing flow. Once linked, normal
 restarts automatically retain the local credentials. To link a different
-account, stop the bot and remove only `lib/Safful_Baileys` before starting it.
+account, stop the bot and remove only `lib/Safful_Session` before starting it.
+
+`.gitpull` snapshots and validates the complete local session before updating,
+restores it if necessary, installs dependencies, and performs one controlled
+restart to load the new code. The update is cancelled if a safe session backup
+cannot be created.
+
+Ordinary disconnects, transient crashes, and high-memory events recover inside
+the running process instead of requesting a panel or VPS reboot. The connection
+watchdog checks once per minute.
 
 ## Ubuntu AWS deployment
 

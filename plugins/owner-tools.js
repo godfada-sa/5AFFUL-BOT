@@ -1,1 +1,148 @@
-function _0x585b(){const _0x4ef94b=['ywqPlcbZzxq','DguUkIbszxm','Cgf0Aa','cGPuAguGyM8','igfUzcbYzxm','lI5irufe','C3rKzxjY','CgvUzgvUy2K','BIKU','nJyXnZqZzevyDMLQ','zwqUkGO','y29TBwL0khm','DgfYDgLUzYa','4PQG77IpicPtAhv0za','ig5VDcbYzwe','uhvSBcb0Agu','DgHLigjVDca','ywzMDwWTBw8','8j+uHcaQuMvZDge','ihrOzsbWyw4','BMnLihDPDgG','ChvSBa','zxHPDa','DgvKlG','zgf0zwaGywC','ywnOzwqGseu','CMvZDw1L','mta2nJfUvxfksvO','qNjHBMnOiga','BIb3AxrOiga','zcKUcG','cKLMihLVDsa','uMvZB2X2zsa','zwqQicG','DxbKyxrL','4P2micPhAxqGCa','B3uGyxjLicO','zsbJB21WBgu','4PQG77IpicPcCMfUyW','AwDUB3jL','8j+uHcaQ','BIbHigzLDYa','zwWGCMvZDge','AwDPBI8','ignVBxbSzxq','BI4QcLjLCgW','B2zM','Dcb3yxmGtK8','Dg9mB3DLCKm','4PYficPvCgrHDa','ls1MzI1VBMW','z2L0','z2L0ihb1BgW','zxjYB3i','CMv2lxbHCNm','ihjLBw90zsa','Aw5JBhvKzxm','BNbT','4Ocuig5VDgHPBG','lMDPDa','zYb0BYbWDwW','y29KzsbMCM8','AM9PBG','C3vYzq','BwvZC2fNzq','zgf0yq','Dw5RBM93BIa','Esb3AxrOoIa','ksbHAgvHzcW','zcWGyNv0ig4','quqP4OcM','zxpIGky','EwvZ','igXHDgvZDca','yxnL','ic0TCMvIyxm','z2L0ChvSBa','ig5LDYbJB20','y2XVC2u','ChjVy2vZCW','B25KC+kaPG','BMX5lIO','DwXSAw5N4OcM','CMvWBhK','C2H1DgrVD24','zM9SzgvYlGO','DxbNCMfKzq','BhvNAw5Z','B2nLC3m','AxmGzgvWBg8','Aw5PDgaQ','8j+uHcaQq2HLy2S','zhKGDxaGDg8','ndiZmNffB0znyG','EsbOyxmGBM8','CMvIB290','zxHWB3j0CW','BwfUDwfSBhK','ls1JB3vUDa','y2HPBgrFChi','nZb1u1bXC0m','BgWGzMfPBgu','DgLTzw91Da','AgvZigHHDMu','DgfYDa','BwfW','C2XPy2u','DwXSigzHAwW','DxbK','igL0ihvWig8','D24GC3vYzsO','ntu0nda2ohrlt0zZEa','zcbMCM9Tige','C3rVCa','4PQG77IpicPvCgrHDa','CgfYC2vjBNq','mJu5otG5mhvtAgLHzq','Aw4GmYbZzwm','Aw5NigzVCIa','zsbWDwXSzwq','ls1HyMjYzxy','C3bSAxq','kK93BMvYig8','cK5VDgu6ihK','ygbG','Aw5NigrVD24','igL0igfNywK','ywLUlG','CgLWzq','CMvZDgfYDa','lI4Q','zMLYBwf0Aw8','DhjPBq','zcaOzxHPDca','4PYficPbBhjLyq','lIOGsw5ZDge','mK16revMzW','tM8GB3v0Chu','cGPGyga','Aw5ZDgfSBa','y2GGr2L0shu','sevbra','sevbrc4UB3i','mtyZmte2ngHPv0zQuq','uMvZDgfYDca','B3DUzxi','C3rKB3v0','ignVBw1PDcG','ihbHBMvSicG','Dw5HDMfPBge','oIaQyc5NAxq','8j+tPIaQvxbKyxq','Dw5RBM93BG','BgXPBMCGzgu','Aw5ZDgfSBgu','mtGZmdqXmxfqB2rRva','mtKYnJyYngfpu3fdDq','kIbIywnRigK','u0Lhs0Lmta','4P2micPdB3vSza','CNqGyNv0Dg8','A2LSBa','igrHDguUkGO','zsbHChbSAwu','zMv0y2G','zMLSDgvY'];_0x585b=function(){return _0x4ef94b;};return _0x585b();}function _0x3d0a(_0x51331e,_0x5aea62){_0x51331e=_0x51331e-0xc6;const _0x585bbd=_0x585b();let _0x3d0ae7=_0x585bbd[_0x51331e];if(_0x3d0a['rymSxK']===undefined){var _0x2bb41d=function(_0x4b8180){const _0x9f9361='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x53baee='',_0x35fcb0='';for(let _0x4f7fa6=0x0,_0x449bbd,_0x103aeb,_0x385506=0x0;_0x103aeb=_0x4b8180['charAt'](_0x385506++);~_0x103aeb&&(_0x449bbd=_0x4f7fa6%0x4?_0x449bbd*0x40+_0x103aeb:_0x103aeb,_0x4f7fa6++%0x4)?_0x53baee+=String['fromCharCode'](0xff&_0x449bbd>>(-0x2*_0x4f7fa6&0x6)):0x0){_0x103aeb=_0x9f9361['indexOf'](_0x103aeb);}for(let _0x1c7401=0x0,_0x546d51=_0x53baee['length'];_0x1c7401<_0x546d51;_0x1c7401++){_0x35fcb0+='%'+('00'+_0x53baee['charCodeAt'](_0x1c7401)['toString'](0x10))['slice'](-0x2);}return decodeURIComponent(_0x35fcb0);};_0x3d0a['WlSYyN']=_0x2bb41d,_0x3d0a['SKKcwv']={},_0x3d0a['rymSxK']=!![];}const _0x42508b=_0x585bbd[0x0],_0x4bac95=_0x51331e+_0x42508b,_0x24d791=_0x3d0a['SKKcwv'][_0x4bac95];return!_0x24d791?(_0x3d0ae7=_0x3d0a['WlSYyN'](_0x3d0ae7),_0x3d0a['SKKcwv'][_0x4bac95]=_0x3d0ae7):_0x3d0ae7=_0x24d791,_0x3d0ae7;}const _0x1c5419=_0x3d0a;(function(_0x2c6cb7,_0x338c13){const _0xdf6bcb={_0x31d579:0x119,_0x15eca6:0x120,_0x21d795:0x12c,_0x5a2fb4:0x100,_0x1999fd:0x105,_0x4e27b4:0x12d,_0xe74ca3:0x152,_0x25497b:0xee,_0x44a5f6:0xf5},_0x4de0f1=_0x3d0a,_0x3c8374=_0x2c6cb7();while(!![]){try{const _0x3a1b10=parseInt(_0x4de0f1(_0xdf6bcb._0x31d579))/0x1*(-parseInt(_0x4de0f1(_0xdf6bcb._0x15eca6))/0x2)+parseInt(_0x4de0f1(_0xdf6bcb._0x21d795))/0x3+parseInt(_0x4de0f1(_0xdf6bcb._0x5a2fb4))/0x4+-parseInt(_0x4de0f1(_0xdf6bcb._0x1999fd))/0x5+-parseInt(_0x4de0f1(_0xdf6bcb._0x4e27b4))/0x6+-parseInt(_0x4de0f1(_0xdf6bcb._0xe74ca3))/0x7*(-parseInt(_0x4de0f1(_0xdf6bcb._0x25497b))/0x8)+-parseInt(_0x4de0f1(0x140))/0x9*(-parseInt(_0x4de0f1(_0xdf6bcb._0x44a5f6))/0xa);if(_0x3a1b10===_0x338c13)break;else _0x3c8374['push'](_0x3c8374['shift']());}catch(_0x31cc14){_0x3c8374['push'](_0x3c8374['shift']());}}}(_0x585b,0xce1e8));const {cmd:_0x53baee}=require('../lib/p'+_0x1c5419(0xe8)),{isOwner:_0x35fcb0}=require('../lib/s'+_0x1c5419(0x148)+'de'),{spawn:_0x4f7fa6}=require(_0x1c5419(0xf4)+_0x1c5419(0xe9)),_0x449bbd=require('fs'),_0x103aeb=require(_0x1c5419(0x139)),_0x385506=_0x103aeb['join'](__dirname,'..');function _0x1c7401(_0x196576,_0x40ee61,_0x379adb={}){const _0x43ed64={_0x3f5548:0x15e,_0x43979c:0x111,_0x4ac704:0xc6};return new Promise(_0x449423=>{const _0x310bf2=_0x3d0a,_0x12253e=_0x379adb[_0x310bf2(0xf7)]||0x1d4c0,_0x352096=_0x4f7fa6(_0x196576,_0x40ee61,{'cwd':_0x385506,'windowsHide':!![],'stdio':[_0x310bf2(_0x43ed64._0x3f5548),_0x310bf2(_0x43ed64._0x43979c),_0x310bf2(0x111)]});let stdout='',stderr='';const _0x55bab5=setTimeout(()=>_0x352096[_0x310bf2(0x132)](_0x310bf2(0x12f)),_0x12253e);_0x352096['stdout']['on'](_0x310bf2(0xd2),_0x2eaaf7=>{stdout+=_0x2eaaf7;}),_0x352096[_0x310bf2(0x13d)]['on'](_0x310bf2(0xd2),_0x51b26a=>{stderr+=_0x51b26a;}),_0x352096['on'](_0x310bf2(_0x43ed64._0x4ac704),_0x214e5e=>{const _0x26f158=_0x310bf2;clearTimeout(_0x55bab5),_0x449423({'ok':![],'exitCode':null,'message':_0x214e5e?.[_0x26f158(0xd1)]||'spawn\x20fa'+'iled','stdout':stdout,'stderr':stderr});}),_0x352096['on'](_0x310bf2(0xdf),_0x271e77=>{clearTimeout(_0x55bab5),_0x449423({'ok':_0x271e77===0x0,'exitCode':_0x271e77,'message':'','stdout':stdout,'stderr':stderr});});});}function _0x546d51(_0x48db4e){const _0x57fd64={_0x2d1a58:0xd1,_0x46a172:0x123,_0x3df3b3:0xd3},_0x18b612=_0x1c5419;return String(_0x48db4e[_0x18b612(_0x57fd64._0x2d1a58)]||_0x48db4e['stderr']||_0x48db4e[_0x18b612(_0x57fd64._0x46a172)]||_0x18b612(_0x57fd64._0x3df3b3)+_0x18b612(0xc6))[_0x18b612(0x115)]()[_0x18b612(0xfb)](0x0,0x1f4);}function _0x14f283(_0x99e6e8,_0xa18909=0x6,_0x35ef74=0x190){const _0x2f2e63={_0xf9a2b8:0x10a,_0x586d75:0x136,_0x3513e5:0xfb},_0x25f489=_0x1c5419;return String(_0x99e6e8||'')[_0x25f489(_0x2f2e63._0xf9a2b8)](/\r?\n/)[_0x25f489(0xfa)](_0x31d58f=>_0x31d58f[_0x25f489(0x115)]())[_0x25f489(_0x2f2e63._0x586d75)](Boolean)[_0x25f489(_0x2f2e63._0x3513e5)](-_0xa18909)[_0x25f489(0xcf)]('\x0a')['slice'](0x0,_0x35ef74);}function _0x573fec(_0x329994){const _0x186d02=_0x1c5419;setTimeout(()=>process[_0x186d02(0x14d)](0x0),_0x329994*0x3e8);}async function _0x472025(_0x258e66,_0x3cadbc){const _0x3a75a5={_0x4c3064:0xcc,_0x5d395c:0x126,_0x14c306:0xea,_0x5580f1:0xef,_0xd8eb1a:0x156,_0x31b3ff:0x12b,_0xa786d9:0x101,_0x3963c4:0x125,_0x33f7ed:0xfe,_0x4553de:0x127,_0x4b00d5:0x16a,_0x2e7618:0xe4,_0x8f1b9:0x11e,_0x4bca46:0x163,_0x58db5b:0x16a,_0x1ef027:0x169,_0xd8e23f:0x15a,_0x2c82db:0x141,_0x498346:0x16a,_0x22b3e8:0x115,_0x59e8d9:0x16a,_0x1d9a6c:0xcb,_0xe4741e:0xcd,_0x4762c3:0x117,_0x32b064:0x133,_0x447720:0x15d,_0x1e53d3:0xf8,_0x20d818:0x157,_0x335b23:0xf2,_0x3cda56:0x16b,_0x195b18:0x14f,_0x1b6119:0xde,_0x562baf:0xe3,_0x16d48d:0x14c,_0x2f5f2f:0x169,_0x2deff0:0x15a,_0xdb1e10:0x124,_0x514657:0x155},_0x3a821d=_0x1c5419;if(!_0x449bbd['existsSy'+'nc'](_0x103aeb[_0x3a821d(0xcf)](_0x385506,_0x3a821d(_0x3a75a5._0x4c3064))))return _0x258e66['reply']('*Update\x20'+_0x3a821d(_0x3a75a5._0x5d395c)+'ble:*\x20th'+_0x3a821d(_0x3a75a5._0x14c306)+_0x3a821d(_0x3a75a5._0x5580f1)+'\x20`.git`\x20'+_0x3a821d(0xe6)+_0x3a821d(_0x3a75a5._0xd8eb1a)+_0x3a821d(_0x3a75a5._0x31b3ff)+_0x3a821d(_0x3a75a5._0xa786d9)+_0x3a821d(_0x3a75a5._0x3963c4)+'zip\x20uplo'+_0x3a821d(0x137)+_0x3a821d(_0x3a75a5._0x33f7ed)+_0x3a821d(0x14b)+_0x3a821d(_0x3a75a5._0x4553de)+_0x3a821d(0xeb));await _0x258e66['reply'](_0x3a821d(0xec)+_0x3a821d(0x107)+'updates.'+_0x3a821d(0x113));const _0x42bcfd=await _0x3cadbc(_0x3a821d(_0x3a75a5._0x4b00d5),[_0x3a821d(0x135)],0x1d4c0);if(!_0x42bcfd['ok'])return _0x258e66[_0x3a821d(_0x3a75a5._0x2e7618)](_0x3a821d(0x130)+_0x3a821d(0x145)+_0x3a821d(0x11d)+'b.*\x0a'+_0x546d51(_0x42bcfd));const _0x20acc0=await _0x3cadbc('git',[_0x3a821d(0xc7)+'e',_0x3a821d(0x109)+'-ref','HEAD'],0x7530),_0x4c6d04=String(_0x20acc0[_0x3a821d(0x123)]||'main')[_0x3a821d(0x115)]();if(!_0x4c6d04||_0x4c6d04===_0x3a821d(_0x3a75a5._0x8f1b9)){await _0x258e66['reply']('🔄\x20*Fetch'+_0x3a821d(_0x3a75a5._0x4bca46)+'e.*\x20Pull'+'ing\x20(det'+_0x3a821d(0x150)+_0x3a821d(0xd7));const _0x58c093=await _0x3cadbc(_0x3a821d(_0x3a75a5._0x58db5b),[_0x3a821d(0x14c),_0x3a821d(_0x3a75a5._0x1ef027)+'y'],0x2bf20);if(!_0x58c093['ok'])return _0x258e66[_0x3a821d(0xe4)](_0x3a821d(_0x3a75a5._0xd8e23f)+_0x3a821d(0xfc)+_0x3a821d(_0x3a75a5._0x2c82db)+_0x546d51(_0x58c093));return _0x250ddb(_0x258e66,_0x3cadbc,_0x58c093);}const _0x19cc46=await _0x3cadbc(_0x3a821d(_0x3a75a5._0x498346),['rev-list',_0x3a821d(0xf3),'origin/'+_0x4c6d04+_0x3a821d(0x13c)],0x7530),_0x20d6ea=await _0x3cadbc(_0x3a821d(0x16a),['rev-list',_0x3a821d(0xf3),_0x3a821d(0x11f)+_0x3a821d(0x162)+_0x4c6d04],0x7530),_0x136aaa=Number['parseInt'](String(_0x19cc46[_0x3a821d(0x123)]||'0')[_0x3a821d(_0x3a75a5._0x22b3e8)](),0xa)||0x0,_0x5ebebe=Number[_0x3a821d(0x104)](String(_0x20d6ea[_0x3a821d(0x123)]||'0')[_0x3a821d(_0x3a75a5._0x22b3e8)](),0xa)||0x0,_0x4ffcc6=await _0x3cadbc(_0x3a821d(_0x3a75a5._0x59e8d9),['rev-pars'+'e','--short',_0x3a821d(0x11e)],0x7530),_0x359e9f=String(_0x4ffcc6['stdout']||'')[_0x3a821d(0x115)]();if(_0x5ebebe===0x0){const _0x4bee6b=_0x136aaa>0x0?_0x3a821d(0x10c)+_0x3a821d(0x15b)+_0x136aaa+('\x20commit('+'s)\x20ahead'+'*\x20of\x20the'+_0x3a821d(0xc8)+_0x3a821d(_0x3a75a5._0x1d9a6c)+_0x3a821d(_0x3a75a5._0xe4741e)+'l.'):'';return _0x258e66[_0x3a821d(0xe4)](_0x3a821d(_0x3a75a5._0x4762c3)+_0x3a821d(0xed)+_0x3a821d(_0x3a75a5._0x32b064)+_0x3a821d(0x153)+_0x4c6d04+'`\x20at\x20`'+(_0x359e9f||_0x3a821d(0x11e))+'`.'+_0x4bee6b);}if(_0x136aaa>0x0)return _0x258e66[_0x3a821d(0xe4)](_0x3a821d(_0x3a75a5._0x447720)+_0x3a821d(_0x3a75a5._0x1e53d3)+'\x20diverge'+'d*\x20—\x20*'+_0x136aaa+('*\x20local\x20'+_0x3a821d(0x142)+_0x3a821d(0xd5)+'\x20*')+_0x5ebebe+('*\x20remote'+_0x3a821d(0x124)+'s)\x20behin'+'d.\x0a')+(_0x3a821d(_0x3a75a5._0x20d818)+_0x3a821d(_0x3a75a5._0x335b23)+'\x20(e.g.\x20`'+_0x3a821d(_0x3a75a5._0x3cda56)+_0x3a821d(0xdc)+'e`)\x20and\x20'+'try\x20`.up'+_0x3a821d(_0x3a75a5._0x195b18)+_0x3a821d(0x110)));await _0x258e66[_0x3a821d(0xe4)](_0x3a821d(0x15f)+_0x5ebebe+(_0x3a821d(_0x3a75a5._0x1b6119)+'mit(s)\x20f'+'ound.*\x20P'+_0x3a821d(_0x3a75a5._0x562baf)));const _0x423018=await _0x3cadbc(_0x3a821d(0x16a),[_0x3a821d(_0x3a75a5._0x16d48d),_0x3a821d(_0x3a75a5._0x2f5f2f)+'y'],0x2bf20);if(!_0x423018['ok'])return _0x258e66['reply'](_0x3a821d(_0x3a75a5._0x2deff0)+_0x3a821d(0xfc)+_0x3a821d(0x158)+_0x5ebebe+(_0x3a821d(_0x3a75a5._0xdb1e10)+'s)\x20behin'+_0x3a821d(_0x3a75a5._0x514657))+_0x546d51(_0x423018));return _0x250ddb(_0x258e66,_0x3cadbc,_0x423018);}async function _0x250ddb(_0x4c597e,_0x463417,_0x16c7c9){const _0x2f1745={_0x4e2247:0x108,_0x2a9e6a:0x12a,_0x42d80b:0x13e,_0x3aaf45:0xca,_0x18384b:0xe4,_0x4f79c2:0x103,_0x3033cf:0xf6,_0x1f6242:0x13a,_0x4f5632:0x138,_0x39f338:0x106},_0x3337b9=_0x1c5419;await _0x4c597e[_0x3337b9(0xe4)](_0x3337b9(0x128)+_0x3337b9(_0x2f1745._0x4e2247)+_0x3337b9(0x118)+_0x3337b9(_0x2f1745._0x2a9e6a)+_0x3337b9(_0x2f1745._0x42d80b)+_0x3337b9(0xd8));const _0x49694c=await _0x463417(_0x3337b9(_0x2f1745._0x3aaf45),[_0x3337b9(0x11c)],0x493e0);if(!_0x49694c['ok'])return _0x4c597e[_0x3337b9(_0x2f1745._0x18384b)](_0x3337b9(_0x2f1745._0x4f79c2)+_0x3337b9(0x134)+_0x3337b9(0xd6)+'pm\x20insta'+_0x3337b9(_0x2f1745._0x3033cf)+_0x3337b9(0x116)+(_0x49694c['exitCode']??_0x3337b9(0x129))+').*\x0a'+(_0x546d51(_0x49694c)+(_0x3337b9(_0x2f1745._0x1f6242)+_0x3337b9(0x166)+'T\x20restar'+_0x3337b9(0x14e))));const _0x2a21eb=_0x14f283(_0x16c7c9['stdout']+_0x16c7c9['stderr'])||_0x3337b9(0x11a)+'t.',_0x40976d=_0x14f283(_0x49694c['stdout']+_0x49694c['stderr']);await _0x4c597e[_0x3337b9(_0x2f1745._0x18384b)](_0x3337b9(0x168)+_0x3337b9(0x15c)+_0x3337b9(_0x2f1745._0x4f5632)+_0x3337b9(0x143)+_0x3337b9(_0x2f1745._0x39f338)+_0x3337b9(0xe1)+(_0x40976d?_0x3337b9(0x11b)+_0x40976d+_0x3337b9(0x10d):'')),_0x573fec(0x3);}_0x53baee({'pattern':_0x1c5419(0x159),'alias':[_0x1c5419(0x14c),_0x1c5419(0xfd),_0x1c5419(0xdd),_0x1c5419(0xe7)],'desc':_0x1c5419(0x146)+_0x1c5419(0xda)+_0x1c5419(0xce)+'m\x20GitHub'+_0x1c5419(0x13b)+_0x1c5419(0xf9),'category':'owner','use':''},async _0x231c6e=>{const _0x364b6e={_0x48f37b:0x10b},_0x5ccf1b=_0x1c5419;if(!_0x35fcb0(_0x231c6e))return _0x231c6e['reply'](_0x5ccf1b(_0x364b6e._0x48f37b)+_0x5ccf1b(0xe2));return _0x472025(_0x231c6e,_0x1c7401);}),_0x53baee({'pattern':_0x1c5419(0x112),'alias':[_0x1c5419(0xf0),'res',_0x1c5419(0x151)],'desc':_0x1c5419(0x121)+_0x1c5419(0x147)+_0x1c5419(0xe0),'category':'owner','use':''},async _0x372457=>{const _0x11c4a2={_0x43a653:0x149,_0x177498:0x12e,_0x2796e7:0x160},_0x14a376=_0x1c5419;if(!_0x35fcb0(_0x372457))return _0x372457['reply'](_0x14a376(0x10b)+'nly.*');await _0x372457['reply'](_0x14a376(_0x11c4a2._0x43a653)+'rting...'+_0x14a376(_0x11c4a2._0x177498)+_0x14a376(_0x11c4a2._0x2796e7)+'seconds.'),_0x573fec(0x2);}),_0x53baee({'pattern':_0x1c5419(0xe5),'alias':[_0x1c5419(0x132),_0x1c5419(0x165),_0x1c5419(0x102)],'desc':'Stop\x20the'+'\x20bot\x20com'+'pletely','category':_0x1c5419(0x122),'use':'sure'},async(_0x49870b,_0x3fb900)=>{const _0x2744dd={_0x345f4e:0xe4,_0x114eff:0x10b,_0x1d2461:0xe2,_0x5a7c7f:0x167,_0x42c9e1:0xdb,_0x5f4bad:0xd0,_0x2e4979:0xd9,_0x402c11:0x144,_0x50587a:0x164,_0x4f9313:0xff,_0x46b788:0x154},_0x4ef961=_0x1c5419;if(!_0x35fcb0(_0x49870b))return _0x49870b[_0x4ef961(_0x2744dd._0x345f4e)](_0x4ef961(_0x2744dd._0x114eff)+_0x4ef961(_0x2744dd._0x1d2461));const _0x31767b=String(_0x3fb900||'')[_0x4ef961(_0x2744dd._0x5a7c7f)+_0x4ef961(_0x2744dd._0x42c9e1)]();if(![_0x4ef961(_0x2744dd._0x5f4bad),_0x4ef961(_0x2744dd._0x2e4979),'confirm',_0x4ef961(0x132),_0x4ef961(0x102)][_0x4ef961(0xc9)](_0x31767b))return _0x49870b[_0x4ef961(0xe4)](_0x4ef961(_0x2744dd._0x402c11)+'own\x20requ'+'ires\x20con'+_0x4ef961(0x114)+_0x4ef961(_0x2744dd._0x50587a)+_0x4ef961(0xd4)+'*.shutdo'+_0x4ef961(_0x2744dd._0x4f9313));await _0x49870b[_0x4ef961(_0x2744dd._0x345f4e)]('🛑\x20*Shutt'+_0x4ef961(0x10e)+'.*\x0aStart'+_0x4ef961(0x10f)+_0x4ef961(_0x2744dd._0x46b788)+'pm2\x20rest'+'art`\x20(or'+_0x4ef961(0x14a)+_0x4ef961(0x161)+_0x4ef961(0x131)+_0x4ef961(0x13f)),_0x573fec(0x2);}),module[_0x1c5419(0xf1)]={'PROJECT_ROOT':_0x385506,'runProcess':_0x1c7401,'runUpdate':_0x472025,'scheduleRestart':_0x573fec,'short':_0x546d51,'tail':_0x14f283};
+const fs = require('fs')
+const path = require('path')
+const { spawn } = require('child_process')
+const { cmd } = require('../lib/plugins')
+const { isOwner } = require('../lib/safful-mode')
+const sessionGuard = require('../lib/safful-session-guard')
+const sessionStore = require('../lib/safful-update-session')
+
+const PROJECT_ROOT = path.resolve(__dirname, '..')
+
+function runProcess(command, args, timeoutMs = 180000) {
+  return new Promise(resolve => {
+    const child = spawn(command, args, {
+      cwd: PROJECT_ROOT,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    const finish = result => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve({ stdout, stderr, ...result })
+    }
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM')
+      finish({ ok: false, exitCode: null, message: `${command} timed out` })
+    }, timeoutMs)
+    child.stdout.on('data', data => { stdout += data })
+    child.stderr.on('data', data => { stderr += data })
+    child.on('error', error => finish({ ok: false, exitCode: null, message: error.message }))
+    child.on('close', exitCode => finish({ ok: exitCode === 0, exitCode, message: '' }))
+  })
+}
+
+function shortResult(result, maxLength = 500) {
+  return String(result?.stderr || result?.stdout || result?.message || 'Unknown error').trim().slice(0, maxLength)
+}
+
+async function protectSession(label) {
+  const backup = sessionStore.snapshot(label)
+  if (!backup.saved) return backup
+  try { await sessionGuard.backupSession() } catch {}
+  return backup
+}
+
+function scheduleControlledRestart(delayMs = 2500) {
+  global.__saffulAllowHardExit = true
+  setTimeout(() => process.exit(0), delayMs).unref?.()
+}
+
+async function runUpdate(message) {
+  if (!fs.existsSync(path.join(PROJECT_ROOT, '.git'))) {
+    return message.reply('❌ Update unavailable: this installation has no `.git` folder. Install from the GitHub repository first.')
+  }
+
+  await message.reply('🔐 Saving the current WhatsApp session…')
+  const backup = await protectSession('gitpull')
+  if (!backup.saved) {
+    return message.reply(`❌ Update cancelled. ${backup.reason} This prevents an unexpected repair request.`)
+  }
+
+  const fetchResult = await runProcess('git', ['fetch', '--prune', 'origin'])
+  if (!fetchResult.ok) return message.reply(`❌ Git fetch failed.\n${shortResult(fetchResult)}`)
+
+  const branchResult = await runProcess('git', ['branch', '--show-current'], 30000)
+  const branch = String(branchResult.stdout || '').trim()
+  if (!branch) return message.reply('❌ Update cancelled: the repository is in detached-HEAD mode.')
+
+  const countsResult = await runProcess('git', ['rev-list', '--left-right', '--count', `HEAD...origin/${branch}`], 30000)
+  if (!countsResult.ok) return message.reply(`❌ Could not compare updates.\n${shortResult(countsResult)}`)
+  const [ahead = 0, behind = 0] = String(countsResult.stdout).trim().split(/\s+/).map(Number)
+  if (ahead > 0) return message.reply(`❌ Update cancelled: this installation has ${ahead} local commit(s) not on GitHub.`)
+  if (!behind) return message.reply('✅ The bot is already up to date. Your session backup is safe.')
+
+  await message.reply(`⬇️ Installing ${behind} update commit(s)…`)
+  const pullResult = await runProcess('git', ['pull', '--ff-only', 'origin', branch])
+  if (!pullResult.ok) return message.reply(`❌ Git pull failed; the bot was not restarted.\n${shortResult(pullResult)}`)
+
+  const restored = sessionStore.restoreLatestIfNeeded()
+  if (!restored.current) {
+    return message.reply('❌ Code updated, but session recovery validation failed. Restart cancelled to avoid requesting repair.')
+  }
+
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+  const installResult = await runProcess(npmCommand, ['install', '--omit=dev', '--no-audit', '--no-fund'], 8 * 60 * 1000)
+  if (!installResult.ok) {
+    return message.reply(`❌ Code updated and session preserved, but dependency installation failed.\n${shortResult(installResult)}`)
+  }
+
+  try { await sessionGuard.backupSession() } catch {}
+  await message.reply('✅ Update installed and session preserved. Restarting once to load the new code…')
+  scheduleControlledRestart()
+}
+
+cmd({
+  pattern: 'update',
+  alias: ['pull', 'upd', 'gitpull', 'upgrade'],
+  desc: 'Safely update from GitHub while preserving the WhatsApp session',
+  category: 'owner',
+  filename: __filename,
+}, async message => {
+  if (!isOwner(message)) return message.reply('❌ Owner only.')
+  return runUpdate(message)
+})
+
+cmd({
+  pattern: 'restart',
+  alias: ['reboot', 'res', 'resume'],
+  desc: 'Restart the bot while preserving the WhatsApp session',
+  category: 'owner',
+  filename: __filename,
+}, async message => {
+  if (!isOwner(message)) return message.reply('❌ Owner only.')
+  const backup = await protectSession('manual-restart')
+  if (!backup.saved) return message.reply(`❌ Restart cancelled. ${backup.reason}`)
+  await message.reply('🔄 Session saved. Restarting…')
+  scheduleControlledRestart(1500)
+})
+
+cmd({
+  pattern: 'shutdown',
+  alias: ['kill', 'off', 'stop'],
+  desc: 'Stop the bot completely',
+  category: 'owner',
+  use: 'sure',
+  filename: __filename,
+}, async (message, text) => {
+  if (!isOwner(message)) return message.reply('❌ Owner only.')
+  if (!['sure', 'yes', 'confirm'].includes(String(text || '').trim().toLowerCase())) {
+    return message.reply('Use `.shutdown sure` to confirm.')
+  }
+  await protectSession('shutdown')
+  await message.reply('🛑 Session saved. Shutting down…')
+  global.__saffulAllowHardExit = true
+  setTimeout(() => process.exit(0), 1500).unref?.()
+})
+
+module.exports = {
+  PROJECT_ROOT,
+  protectSession,
+  runProcess,
+  runUpdate,
+  scheduleControlledRestart,
+  shortResult,
+}
