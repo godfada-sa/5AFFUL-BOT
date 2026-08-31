@@ -10,7 +10,7 @@ const GROUP_COMMANDS = new Set([
   'setgname', 'gname', 'left', 'gpp', 'fullgpp', 'common', 'diff', 'invite',
   'revoke', 'tagall', 'kik', 'fkik', 'num', 'poll', 'promote', 'kick', 'group',
   'pick', 'ship', 'mute', 'unmute', 'lock', 'unlock', 'tag', 'hidetag',
-  'tagadmin', 'add', 'getjids', 'gjid', 'gjids', 'allgc', 'gclist', 'demote',
+  'tagadmin', 'add', 'getjids', 'gjid', 'gjids', 'allgc', 'gclist', 'demote', 'all',
   'del', 'delete', 'dlt', 'broadcast',
 ])
 
@@ -337,14 +337,16 @@ async function tagMembers(message, extra, mode) {
   if (mode === 'admins') participants = participants.filter(participant => participant?.admin)
   const jids = participants.map(memberJid).filter(Boolean)
   const body = String(extra?.text || '').trim()
+  // A zero-width character carries the WhatsApp mention metadata without a
+  // visible “Group announcement” or another text body in the chat.
   const text = mode === 'hidden'
-    ? (body || '📢 Group announcement')
+    ? (body || '\u200B')
     : `${body ? `${body}\n\n` : ''}${jids.map(mentionText).join(' ')}`
   return send(message, { text, mentions: jids })
 }
 
 register({ pattern: 'tagall', desc: 'Mention every group member' }, (message, text, extra) => tagMembers(message, { ...extra, text }, 'all'))
-register({ pattern: 'tag', alias: ['hidetag'], desc: 'Send a hidden mention to every member' }, (message, text, extra) => tagMembers(message, { ...extra, text }, 'hidden'))
+register({ pattern: 'tag', alias: ['hidetag', 'all'], desc: 'Silently mention every group member' }, (message, text, extra) => tagMembers(message, { ...extra, text }, 'hidden'))
 register({ pattern: 'tagadmin', desc: 'Mention all group admins' }, (message, text, extra) => tagMembers(message, { ...extra, text }, 'admins'))
 
 async function participantAction(message, text, extra, action, pastTense) {
@@ -443,23 +445,75 @@ register({ pattern: 'del', alias: ['delete', 'dlt'], desc: 'Delete a replied mes
   await context.socket.sendMessage(message.chat, { delete: deleteKey })
 })
 
-register({ pattern: 'broadcast', alias: ['gcast'], desc: 'Broadcast text to every joined group', category: 'owner', fromMe: true, use: '<text>' }, async (message, text, extra) => {
-  if (!(await ownerOnly(message, extra))) return
-  const body = String(text || '').trim()
-  if (!body) return message.reply('Usage: `.broadcast <message>`')
-  const socket = socketFor(message)
-  const groups = await socket.groupFetchAllParticipating()
+function privateChatIds(socket) {
+  const ids = new Set()
+  for (const source of [socket?.contacts, socket?.chats]) {
+    for (const jid of Object.keys(source || {})) {
+      if (/@(s\.whatsapp\.net|lid)$/i.test(jid)) ids.add(normalizeJid(jid))
+    }
+  }
+  // The local store records chats the current session has actually seen.
+  // It is used as a fallback because Baileys does not always populate the
+  // contacts map until a contact sends a fresh message after a restart.
+  try {
+    const store = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'lib', 'store.json'), 'utf8'))
+    for (const jid of Object.keys(store?.messages || store?.chats || {})) {
+      if (/@(s\.whatsapp\.net|lid)$/i.test(jid)) ids.add(normalizeJid(jid))
+    }
+  } catch {}
+  const own = normalizeJid(socket?.user?.id)
+  ids.delete(own)
+  return ids
+}
+
+async function broadcastTo(socket, targets, body) {
   let sent = 0
-  for (const jid of Object.keys(groups || {})) {
+  let failed = 0
+  for (const jid of targets) {
     try {
       await socket.sendMessage(jid, { text: body })
       sent += 1
-    } catch {}
+    } catch {
+      failed += 1
+    }
+    // A small pause avoids WhatsApp rate limits on larger chat lists.
+    if (sent && sent % 12 === 0) await new Promise(resolve => setTimeout(resolve, 350))
   }
-  return message.reply(`Broadcast sent to ${sent} group(s).`)
+  return { sent, failed }
+}
+
+register({ pattern: 'broadcast', alias: ['gcast', 'bc'], desc: 'Broadcast to chats, groups, or all', category: 'owner', fromMe: true, use: '[chat|groups] <message>' }, async (message, text, extra) => {
+  if (!(await ownerOnly(message, extra))) return
+  const input = String(text || '').trim()
+  if (!input) return message.reply('Usage: `.broadcast <message>` (all), `.broadcast chat <message>`, or `.broadcast groups <message>`.')
+  const socket = socketFor(message)
+  if (typeof socket?.sendMessage !== 'function') return message.reply('WhatsApp socket is unavailable.')
+  const [requestedScope, ...words] = input.split(/\s+/)
+  const scope = /^(chat|chats|contact|contacts)$/i.test(requestedScope)
+    ? 'chat'
+    : /^(group|groups)$/i.test(requestedScope)
+      ? 'groups'
+      : 'all'
+  const body = scope === 'all' ? input : words.join(' ').trim()
+  if (!body) return message.reply(`Usage: \`.broadcast ${scope === 'chat' ? 'chat' : 'groups'} <message>\`.`)
+
+  const targets = new Set()
+  if (scope !== 'chat') {
+    try {
+      const groups = await socket.groupFetchAllParticipating()
+      for (const jid of Object.keys(groups || {})) targets.add(jid)
+    } catch (error) {
+      if (scope === 'groups') return message.reply(`Could not load groups: ${error?.message || error}`)
+    }
+  }
+  if (scope !== 'groups') for (const jid of privateChatIds(socket)) targets.add(jid)
+  if (!targets.size) return message.reply(`No ${scope === 'all' ? 'saved chats or groups' : scope === 'chat' ? 'saved chats' : 'groups'} were found.`)
+
+  await message.reply(`📢 Sending to ${targets.size} ${scope === 'all' ? 'chats/groups' : scope}…`)
+  const result = await broadcastTo(socket, targets, body)
+  return message.reply(`✅ Broadcast complete. Sent: *${result.sent}*${result.failed ? ` • Failed: *${result.failed}*` : ''}`)
 })
 
-process.stdout.write(`[group] Loaded ${GROUP_COMMANDS.size} current WhatsApp group-command replacements.\n`)
 
 module.exports = {
   GROUP_COMMANDS,

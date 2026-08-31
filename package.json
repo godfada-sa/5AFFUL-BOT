@@ -7,6 +7,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node --expose-gc index.js",
+    "repair:sharp": "npm rebuild sharp --foreground-scripts",
     "test:commands": "node scripts/test-command-reliability.js",
     "test:update": "node scripts/test-update-session.js"
   },
@@ -66,7 +67,7 @@
     "puppeteer": "latest",
     "qrcode": "latest",
     "secktor-pack": "latest",
-    "sharp": "^0.32.6",
+    "sharp": "^0.35.4",
     "simple-git": "^3.15.1",
     "soundcloud-scraper": "^5.0.3",
     "translatte": "^3.0.1",

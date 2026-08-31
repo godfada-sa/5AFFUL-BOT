@@ -32,6 +32,11 @@ const __uptime = {
 }
 process.exit = function (code) {
   if (code !== 0 && !global.__saffulAllowHardExit) {
+    // The legacy core calls exit(1) after certain successful connection events.
+    // Never replace an already-open socket, otherwise it creates a 440/515 loop.
+    if (global.__saffulConnectionState === 'open') {
+      return
+    }
     process.stdout.write('[uptime] Suppressing process.exit(' + code + ') — connection supervisor will recover.\n')
     try { global.__saffulRequestReconnect?.('core requested exit(' + code + ')') } catch {}
     return
@@ -41,20 +46,19 @@ process.exit = function (code) {
 global.__saffulUptimeSuppress = function (ms) {
   if (!__uptime.active) {
     __uptime.active = true
-    process.stdout.write('[uptime] Guardian activated — will suppress reconnectable disconnects\n')
   }
   __uptime.reconnectCount += 1
   __uptime.suppressUntil = Date.now() + ms
 }
 global.__saffulUptimeReconnected = function () {
   if (__uptime.reconnectCount > 0) {
-    process.stdout.write('[uptime] Reconnected after ' + __uptime.reconnectCount + ' suppressed disconnect(s) — uptime preserved\n')
     __uptime.reconnectCount = 0
   }
 }
 
 const fs = require('fs')
 const path = require('path')
+require(__dirname + '/lib/safful-sharp-runtime-repair').ensureSharpRuntime()
 
 // ── Temp File Cleanup ────────────────────────────────────────────────────
 try {
@@ -148,7 +152,9 @@ const autoView = require(__dirname + '/plugins/statusauto.smd')
 const statusSave = require(__dirname + '/lib/safful-status-save')
 const attachRawDispatcher = require(__dirname + '/lib/safful-raw-dispatcher')
 
-let connectedBannerSent = false
+// Keep this guard global so reconnecting/reloading a socket can never resend
+// the startup banner. A new Node process intentionally starts with a fresh guard.
+let connectedBannerSent = global.__saffulConnectedBannerSent === true
 function connectedBannerText() {
   const handlers = Config.HANDLERS
   const prefa = !handlers || ['false', 'null', ' ', '', 'empty'].includes(String(handlers))
@@ -191,6 +197,7 @@ function notifyConnectedOnce(socket) {
     try {
       await current.sendMessage(recipient, { text: connectedBannerText() })
       connectedBannerSent = true
+      global.__saffulConnectedBannerSent = true
     } catch {}
   }
   socket.ev.on('connection.update', ({ connection } = {}) => {
@@ -225,6 +232,7 @@ function disconnectCode(update = {}) {
 function scheduleReconnect(reason = 'connection closed', delay = 5000) {
   if (shutdownRequested || reconnectBlocked || reconnectTimer) return
   lastConnectionState = 'reconnecting'
+  global.__saffulConnectionState = 'reconnecting'
   process.stdout.write(`[uptime] ${reason} — reconnecting in ${Math.ceil(delay / 1000)}s.\n`)
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null
@@ -242,6 +250,12 @@ function cancelScheduledReconnect() {
 }
 
 global.__saffulRequestReconnect = (reason) => scheduleReconnect(reason, 1500)
+global.__saffulRecycleSocket = (reason) => {
+  if (shutdownRequested || reconnectBlocked) return
+  const socket = global.__saffulLatestSocket
+  try { socket?.end?.(new Error(reason)) } catch {}
+  scheduleReconnect(reason, 2000)
+}
 
 const start = async () => {
   if (startInFlight || shutdownRequested) return
@@ -350,11 +364,10 @@ const start = async () => {
       delete require.cache[pluginPath]
       require(pluginPath)
     }
+    // Re-register after all legacy plugins so `.antiviewonce` is never
+    // shadowed by a late-loaded implementation.
+    require(__dirname + '/plugins/antiviewonce').installCommand()
     const deduplication = require(__dirname + '/plugins/safful-command-reliability').deduplicateCommands()
-    if (deduplication.removedCommands || deduplication.removedAliases) {
-      process.stdout.write(`[boot] removed ${deduplication.removedCommands} duplicate commands and ${deduplication.removedAliases} duplicate aliases\n`)
-    }
-    process.stdout.write('[boot] command reliability replacements ready\n')
 
     bootPhase = 'database-sync'
     process.stdout.write('[boot] syncing database…\n')
@@ -381,6 +394,7 @@ const start = async () => {
       }
       if (!state || state === lastConnectionState) return
       lastConnectionState = state
+      global.__saffulConnectionState = state
       const error = update.lastDisconnect?.error
       const reason = error ? ` — ${error?.message || error}` : ''
       process.stdout.write(`[boot] connection state: ${state}${reason}\n`)
@@ -450,16 +464,29 @@ const start = async () => {
     // Memory Watchdog (installed once even when the socket reconnects)
     if (!global.__saffulMemoryWatchdogInstalled) {
       global.__saffulMemoryWatchdogInstalled = true
+      let sustainedHighMemoryChecks = 0
+      const softMemoryMB = Math.max(128, Number(process.env.SAFFUL_MEMORY_SOFT_MB || 450))
+      const hardMemoryMB = Math.max(softMemoryMB + 64, Number(process.env.SAFFUL_MEMORY_HARD_MB || 650))
       const memoryCheck = setInterval(() => {
-        const heapMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
-        if (heapMB > 800) {
-          process.stdout.write(`[uptime] High memory (${heapMB} MB) — trimming caches without rebooting.\n`)
+        const memory = process.memoryUsage()
+        const heapMB = Math.round(memory.heapUsed / 1024 / 1024)
+        const rssMB = Math.round(memory.rss / 1024 / 1024)
+        const highMemory = Math.max(heapMB, rssMB)
+        if (highMemory >= softMemoryMB) {
+          process.stdout.write(`[uptime] Memory pressure: heap ${heapMB} MB, RSS ${rssMB} MB — trimming caches.\n`)
           try { if (typeof global.__saffulStoreTrim === 'function') global.__saffulStoreTrim() } catch {}
           if (global.gc) global.gc()
         }
-        else if (heapMB > 650) { try { if (typeof global.__saffulStoreTrim === 'function') global.__saffulStoreTrim() } catch {} ; if (global.gc) global.gc() }
-        else if (heapMB > 500) { if (global.gc) global.gc() }
-      }, 30 * 60 * 1000)
+        if (highMemory >= hardMemoryMB) sustainedHighMemoryChecks += 1
+        else sustainedHighMemoryChecks = 0
+        // Three five-minute checks prevent an OOM kill while avoiding needless
+        // recovery on a short-lived media conversion spike.
+        if (sustainedHighMemoryChecks >= 3) {
+          sustainedHighMemoryChecks = 0
+          process.stdout.write(`[uptime] Sustained memory pressure — recycling only the WhatsApp socket, not the bot process.\n`)
+          global.__saffulRecycleSocket?.('sustained memory pressure')
+        }
+      }, 5 * 60 * 1000)
       memoryCheck.unref?.()
       const gcInterval = setInterval(() => { if (global.gc) global.gc() }, 6 * 60 * 60 * 1000)
       gcInterval.unref?.()
@@ -504,7 +531,10 @@ try {
         status: isAlive ? 'ok' : 'disconnected',
         connection: lastConnectionState,
         uptime: Math.floor(process.uptime()),
-        memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        memory: {
+          heapMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          rssMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
+        },
         bot: 'Safful-MD',
       }))
     } else {

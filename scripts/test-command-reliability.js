@@ -11,6 +11,7 @@ process.env.SAFFUL_AUTOMOD_FILE = path.join(automodTestDirectory, 'automod.json'
 require('../plugins/auto-moderation')
 require('../plugins/safful-command-reliability')
 require('../plugins/safful-group-reliability')
+require('../plugins/antiviewonce')
 
 function handler(pattern) {
   const command = registry.commands.find(item => item.pattern === pattern)
@@ -65,7 +66,7 @@ async function testTextCommands() {
 
   const ping = directMessage()
   await handler('ping')(ping.message, '', { smd: 'ping' })
-  const pingText = ping.sends.at(-1)?.content?.text || ping.replies.at(-1)
+  const pingText = ping.replies.at(-1)
   assert.match(pingText, /Pong.*\d+ ms/i)
 }
 
@@ -95,6 +96,20 @@ async function testImageCommands() {
   })
   await handler('photo')(photo.message, '', { smd: 'photo' })
   assert(Buffer.isBuffer(photo.sends.at(-1)?.content?.image), 'Photo command did not send an image')
+
+  for (const pattern of ['crop', 'circle', 'round']) {
+    const transformed = directMessage({
+      quoted: { mtype: 'imageMessage', async download() { return png } },
+    })
+    transformed.message.bot.sendMessage = async (chat, content) => {
+      assert(content?.sticker?.url, `${pattern} did not produce a sticker file`)
+      assert(fs.existsSync(content.sticker.url), `${pattern} sticker file did not exist while sending`)
+      transformed.sends.push({ chat, content })
+      return { key: { id: pattern } }
+    }
+    await handler(pattern)(transformed.message, '', { smd: pattern })
+    assert.strictEqual(transformed.sends.length, 1, `${pattern} did not send a sticker`)
+  }
 }
 
 async function testAutoModerationHelpers() {
@@ -171,6 +186,38 @@ async function testGroupCommands() {
 
   await handler('tagall')(sample.message, 'Hello', { smd: 'tagall' })
   assert.strictEqual(sample.sends.at(-1)?.content?.mentions?.length, 3)
+
+  await handler('tag')(sample.message, '', { smd: 'tag' })
+  assert.strictEqual(sample.sends.at(-1)?.content?.text, '\u200B')
+  assert.strictEqual(sample.sends.at(-1)?.content?.mentions?.length, 3)
+
+  const broadcast = directMessage({ fromMe: true })
+  const deliveries = []
+  Object.assign(broadcast.message.bot, {
+    user: { id: '999999999@s.whatsapp.net' },
+    contacts: { '111111111@s.whatsapp.net': {}, '222222222@s.whatsapp.net': {} },
+    async groupFetchAllParticipating() { return { '12345-67890@g.us': {} } },
+    async sendMessage(chat, content) {
+      deliveries.push({ chat, content })
+      return { key: { id: `broadcast-${deliveries.length}`, remoteJid: chat } }
+    },
+  })
+  await handler('broadcast')(broadcast.message, 'chat Hello', { smd: 'broadcast', isCreator: true })
+  assert.deepStrictEqual(deliveries.map(item => item.chat).sort(), ['111111111@s.whatsapp.net', '222222222@s.whatsapp.net'])
+}
+
+async function testAntiViewOnceSettings() {
+  const settingsFile = path.join(__dirname, '..', '.safful-data', 'antiviewonce.json')
+  try { fs.unlinkSync(settingsFile) } catch {}
+  const enabled = directMessage({ fromMe: true })
+  await handler('antiviewonce')(enabled.message, '2348012345678', { smd: 'antiviewonce', isCreator: true })
+  const antiViewOnce = require('../plugins/antiviewonce')
+  assert(antiViewOnce.loadSettings().contacts.includes('2348012345678'))
+  await handler('antiviewonce')(enabled.message, 'on', { smd: 'antiviewonce', isCreator: true })
+  assert.strictEqual(antiViewOnce.loadSettings().global, true)
+  await handler('antiviewonce')(enabled.message, 'off 2348012345678', { smd: 'antiviewonce', isCreator: true })
+  assert(!antiViewOnce.loadSettings().contacts.includes('2348012345678'))
+  try { fs.unlinkSync(settingsFile) } catch {}
 }
 
 async function main() {
@@ -178,6 +225,7 @@ async function main() {
   await testImageCommands()
   await testAutoModerationHelpers()
   await testGroupCommands()
+  await testAntiViewOnceSettings()
 
   const names = new Map()
   for (const command of registry.commands) {
@@ -185,7 +233,7 @@ async function main() {
       names.set(name, (names.get(name) || 0) + 1)
     }
   }
-  for (const required of ['ping', 'ig', 'sticker', 'dbinary', 'antibadword', 'kick']) {
+  for (const required of ['ping', 'ig', 'sticker', 'dbinary', 'antibadword', 'antilink', 'kick', 'broadcast', 'antiviewonce']) {
     assert.strictEqual(names.get(required), 1, `Expected exactly one ${required} registration`)
   }
 

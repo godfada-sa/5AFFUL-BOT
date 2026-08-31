@@ -155,14 +155,12 @@ replaceCommand({
   category: 'general',
 }, async message => {
   const started = process.hrtime.bigint()
-  const initial = await message.reply('🏓 Pinging…')
+  // Editing is not consistently supported for bot messages in recent
+  // WhatsApp clients. Always send a separate result so the latency value is
+  // visible instead of leaving the user at “Pinging…”.
+  await message.reply('🏓 Pinging…')
   const milliseconds = Number(process.hrtime.bigint() - started) / 1e6
-  const text = `🏓 *Pong!* ${milliseconds.toFixed(0)} ms`
-  const socket = socketFor(message)
-  if (initial?.key && typeof socket?.sendMessage === 'function') {
-    try { return await socket.sendMessage(message.chat, { text, edit: initial.key }) } catch {}
-  }
-  return message.reply(text)
+  return message.reply(`🏓 *Pong!* ${Math.max(1, Math.round(milliseconds))} ms`)
 })
 
 const FUN = {

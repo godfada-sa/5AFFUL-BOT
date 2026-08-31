@@ -48,7 +48,9 @@ async function protectSession(label) {
 
 function scheduleControlledRestart(delayMs = 2500) {
   global.__saffulAllowHardExit = true
-  setTimeout(() => process.exit(0), delayMs).unref?.()
+  // A successful exit is treated as a manual stop by many Node panels. A
+  // controlled non-zero exit makes PM2/Pterodactyl restart the service.
+  setTimeout(() => process.exit(1), delayMs).unref?.()
 }
 
 async function runUpdate(message) {
