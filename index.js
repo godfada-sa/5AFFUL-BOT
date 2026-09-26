@@ -225,8 +225,14 @@ const start = async () => {
         clearRecoveryState()
       } catch (pairError) {
         process.stdout.write(`[boot] Pairing failed: ${pairError?.message || pairError}\n`)
-        process.stdout.write('[boot] Falling back to QR login…\n')
-        global.__saffulAuthMethod = 'qr'
+        // A panel operator explicitly selected pairing; changing methods here
+        // makes the panel unexpectedly print a QR after a code expires.
+        // Keep the selected method and request a fresh code after a short
+        // pause instead. This is particularly important on non-interactive
+        // Node.js panels where QR scanning is not the intended login flow.
+        process.stdout.write('[boot] Pairing remains selected; requesting a fresh code in 5 seconds…\n')
+        setTimeout(() => void start(), 5000)
+        return
       }
     }
     // ──────────────────────────────────────────────────────────────────
