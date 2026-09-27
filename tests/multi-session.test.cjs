@@ -1,0 +1,16 @@
+const assert = require('assert')
+const fs = require('fs')
+const path = require('path')
+
+const root = path.join(__dirname, '..')
+const launcher = fs.readFileSync(path.join(root, 'multi-session.js'), 'utf8')
+const preload = fs.readFileSync(path.join(root, 'lib', 'safful-session-slot.js'), 'utf8')
+
+assert.match(launcher, /sessionDir: '\/Safful_Session\/'/)
+assert.match(launcher, /sessionDir: '\/Safful_Session_2\/'/)
+assert.match(launcher, /AUTH_METHOD_2/)
+assert.match(launcher, /PORT_2/)
+assert.match(preload, /SAFFUL_SESSION_DIR/)
+assert.match(preload, /Safful_Session/)
+assert.match(preload, /safful_session_backup/)
+console.log('multi-session launcher configuration checks passed')

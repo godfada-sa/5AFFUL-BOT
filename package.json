@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node --expose-gc index.js",
+    "start:dual": "node --expose-gc multi-session.js",
     "repair:sharp": "npm rebuild sharp --foreground-scripts"
   },
   "author": "Safful",
