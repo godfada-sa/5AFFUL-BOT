@@ -85,6 +85,35 @@ async function protectUntrackedCollisions(branch) {
   return moveUntrackedCollisions(PROJECT_ROOT, pathsFromGit(untracked).filter(name => additions.has(name)))
 }
 
+// Panel deployments are often unpacked or edited in place, leaving tracked
+// files modified even though they are not intentional local commits. A normal
+// fast-forward pull refuses to overwrite them. Preserve those edits in Git's
+// stash, but keep the panel's live .env in place after the update.
+async function stashTrackedChangesForUpdate() {
+  const status = await runProcess('git', ['status', '--porcelain'], 30000)
+  if (!status.ok) throw new Error('Could not inspect local changes before update')
+  const tracked = String(status.stdout || '').split(/\r?\n/).filter(line => line && !line.startsWith('??'))
+  if (!tracked.length) return { stashed: false, envBackup: null }
+
+  const envPath = path.join(PROJECT_ROOT, '.env')
+  let envBackup = null
+  if (fs.existsSync(envPath)) {
+    envBackup = path.join(PROJECT_ROOT, '.safful-data', 'update-config', `${Date.now()}-${process.pid}.env`)
+    fs.mkdirSync(path.dirname(envBackup), { recursive: true })
+    fs.copyFileSync(envPath, envBackup)
+  }
+
+  const stash = await runProcess('git', ['stash', 'push', '--message', `safful-auto-update-${Date.now()}`], 60000)
+  if (!stash.ok) throw new Error(`Could not preserve local changes: ${shortResult(stash)}`)
+  return { stashed: true, envBackup }
+}
+
+function restorePanelEnv(backup) {
+  if (!backup?.envBackup) return
+  const envPath = path.join(PROJECT_ROOT, '.env')
+  fs.copyFileSync(backup.envBackup, envPath)
+}
+
 function restoreUntrackedCollisions(backup) {
   for (const item of backup.moved) {
     if (!fs.existsSync(item.source)) fs.renameSync(item.destination, item.source)
@@ -178,14 +207,27 @@ async function runUpdate(message, { restart = true } = {}) {
   let collisionBackup
   try { collisionBackup = await protectUntrackedCollisions(branch) }
   catch (error) { return message.reply(`❌ Update cancelled before pull: ${error.message}`) }
+  let trackedBackup
+  try { trackedBackup = await stashTrackedChangesForUpdate() }
+  catch (error) {
+    restoreUntrackedCollisions(collisionBackup)
+    return message.reply(`❌ Update cancelled before pull: ${error.message}`)
+  }
   const pullResult = await runProcess('git', ['pull', '--ff-only', 'origin', branch])
   if (!pullResult.ok) {
+    restorePanelEnv(trackedBackup)
     restoreUntrackedCollisions(collisionBackup)
     return message.reply(`❌ Git pull failed; the bot was not restarted.\n${shortResult(pullResult)}`)
   }
 
+  try { restorePanelEnv(trackedBackup) }
+  catch (error) { return message.reply(`❌ Code updated, but restoring the panel .env failed: ${error.message}`) }
+
   if (collisionBackup.moved.length) {
     await message.reply(`📦 Preserved ${collisionBackup.moved.length} conflicting untracked file(s) in ${path.relative(PROJECT_ROOT, collisionBackup.directory)}.`)
+  }
+  if (trackedBackup.stashed) {
+    await message.reply('📦 Preserved local tracked changes in Git stash; the panel .env was restored.')
   }
 
   const restored = sessionStore.restoreLatestIfNeeded()
@@ -261,6 +303,8 @@ module.exports = {
   protectUntrackedCollisions,
   restoreUntrackedCollisions,
   moveUntrackedCollisions,
+  stashTrackedChangesForUpdate,
+  restorePanelEnv,
   resolveUpdateBranch,
   initializeCheckout,
 }
