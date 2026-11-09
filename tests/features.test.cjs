@@ -25,6 +25,7 @@ function setup(t) {
     const mod = { exports: {} }, realRequire = createRequire(filename)
     const req = name => {
       if (name === 'module') return fakeModule
+      if (name === './safful-protection') return load('lib/safful-protection.js')
       if (name === './safful-mobile-notifications') return () => {}
       if (name === '../plugins/statusauto.smd') return { attach: socket => { socket.__saffulAutoViewAttached = true } }
       if (name === '@whiskeysockets/baileys') return { ...baileys, downloadContentFromMessage: async (media, kind) => {
@@ -39,7 +40,7 @@ function setup(t) {
       return realRequire(name)
     }
     vm.runInNewContext(fs.readFileSync(filename, 'utf8'), { require: req, module: mod, exports: mod.exports,
-      __dirname: path.dirname(filename), __filename: filename, Buffer, structuredClone, process: fakeProcess,
+      __dirname: relative === 'lib/safful-protection.js' ? temp : path.dirname(filename), __filename: filename, Buffer, structuredClone, process: fakeProcess,
       global: state.global, console, setTimeout, clearTimeout,
       setInterval: fn => { state.intervals.push(fn); return { unref() {}, fn } },
       clearInterval: timer => { if (timer) timer.cleared = true } }, { filename })
@@ -57,6 +58,60 @@ function setup(t) {
   return { load, registry, state, socket, fakeModule, env }
 }
 function media(id='one', kind='imageMessage') { return { key: { id, remoteJid: '900003@lid', remoteJidAlt:'233240000003@s.whatsapp.net', fromMe:false }, message: { viewOnceMessageV2: { message: { [kind]: { viewOnce:true, directPath:'/valid', mediaKey:Buffer.alloc(32), caption:'hello' } } } } } }
+
+test('E2E: anti-delete delivers the revoked attachment and notice to the first configured DM', async t => {
+  const h = setup(t), protection = h.load('lib/safful-protection.js'), s = h.socket()
+  protection.setAntiDelete(true)
+  protection(s)
+  for (const [kind, details] of Object.entries({
+    sticker: { mimetype: 'image/webp' }, audio: { mimetype: 'audio/ogg', ptt: true },
+    image: { caption: 'image' }, video: { caption: 'video' },
+    document: { fileName: 'invoice.pdf', mimetype: 'application/pdf' },
+  })) {
+    const key = { id: 'deleted-' + kind, remoteJid: 'group@g.us', participant: '233240000003@s.whatsapp.net' }
+    const original = { key, message: { messageContextInfo: {}, [kind+'Message']: { ...details, directPath: '/valid' } } }
+    // No relay transport: exercise the actual download/resend fallback.
+    s.ev.emit('messages.upsert', { messages: [original] })
+    await settle()
+    s.ev.emit('messages.update', [{ key, update: { messageStubType: 1 } }])
+    await settle()
+    const batch = s.sent.splice(0)
+    assert.equal(batch.length, 2, kind)
+    assert.ok(batch.every(([to]) => to === '233240000001@s.whatsapp.net'))
+    assert.equal(batch[0][1][kind].toString(), 'media bytes')
+    for (const [field, value] of Object.entries(details)) {
+      if (kind !== 'sticker') assert.equal(batch[0][1][field], value)
+    }
+    assert.ok(batch[1][1].text)
+    let relayed
+    await protection.reforwardDeletedMessage({ relayMessage: async (_, content) => { relayed = content } }, batch[0][0], original)
+    assert.ok(relayed[kind+'Message'], 'relay must select media over metadata')
+  }
+})
+
+test('E2E: antiviewonce command enforces permissions, contact rules and DM delivery', async t => {
+  const h = setup(t), avo = h.load('plugins/antiviewonce.js'), s = h.socket()
+  avo.attach(s)
+  const run = h.registry.find(c => c.pattern === 'antiviewonce').function
+  const replies = [], owner = { fromMe: true, reply: async msg => replies.push(msg) }
+  await run({ reply: owner.reply }, 'on', { Void: s })
+  assert.match(replies.at(-1), /Owner only/)
+  await run(owner, '233240000003', { Void: s })
+  for (const kind of ['image', 'audio', 'video']) {
+    s.ev.emit('messages.upsert', { messages: [media(kind, kind+'Message')] })
+    await settle()
+    assert.equal(s.sent.at(-1)[0], '233240000001@s.whatsapp.net')
+    assert.equal(s.sent.at(-1)[1][kind].toString(), 'media bytes')
+  }
+  await run(owner, 'off 233240000003', { Void: s })
+  s.ev.emit('messages.upsert', { messages: [media('off')] })
+  await settle()
+  assert.equal(s.sent.length, 3)
+  await run(owner, 'on', { Void: s })
+  s.ev.emit('messages.upsert', { messages: [media('global')] })
+  await settle()
+  assert.equal(s.sent.length, 4)
+})
 
 test('PN resolution never invents a telephone from a LID; group sender uses participantAlt', async t => {
   const h=setup(t), ids=h.load('lib/safful-identities.js'), s=h.socket()
@@ -163,6 +218,7 @@ test('socket factory attaches on every reconnect and serializer recognizes sudo 
   const parent={filename:path.join(root,'lib/smd.js')}
   const factory=h.fakeModule._load('@whiskeysockets/baileys',parent).default
   const first=factory({}), second=factory({})
+  assert.ok(first.__saffulProtectionAttached); assert.ok(second.__saffulProtectionAttached)
   assert.ok(first.__saffulAntiViewOnceAttached); assert.ok(second.__saffulAntiViewOnceAttached)
   assert.ok(first.__saffulAutoViewAttached); assert.ok(second.__saffulAutoViewAttached)
   assert.equal(h.state.global.__saffulLatestSocket,second)

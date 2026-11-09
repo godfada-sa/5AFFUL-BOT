@@ -1,4 +1,4 @@
-# Safful-Md
+# 5AFFUL BOT V3.5
 
 Safful-Md is a WhatsApp multi-device bot powered by Baileys.
 
@@ -18,7 +18,19 @@ npm start
 
 The first launch starts a new WhatsApp pairing flow. Once linked, normal
 restarts automatically retain the local credentials. To link a different
-account, stop the bot and remove only `lib/Safful_Baileys` before starting it.
+account, stop the bot and remove only that device's session directory before
+starting it.
+
+## Two WhatsApp accounts
+
+Set `DEVICE_COUNT=2` in `.env`. Device 1 keeps the normal settings and existing
+session. Configure device 2 with the `_2` variables shown in `.env.example`,
+especially a unique `PORT_2`, owner number and pairing number. The second
+account is stored under `.safful-devices/device-2` and survives restarts.
+
+Both accounts run in isolated Node.js processes so credentials, sockets,
+plugins and runtime state cannot overwrite each other. Set `DEVICE_COUNT=1`
+to return to the original single-account mode without deleting device 2.
 
 ## Ubuntu AWS deployment
 
@@ -39,8 +51,8 @@ connections and the local HTTP server is only for process diagnostics.
 5. After pairing, simply restart the service when needed; its local session is
    retained automatically.
 
-For each additional WhatsApp account, create a new clone, `.env`, port, and
-systemd service. Never copy another bot's `lib/Safful_Baileys` credentials.
+For a second WhatsApp account in the same deployment, use `DEVICE_COUNT=2` and
+the `_2` settings above. Never copy one device's credentials into the other.
 
 ## Security
 

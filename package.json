@@ -1,6 +1,6 @@
 {
   "name": "safful-md",
-  "version": "1.0.1",
+  "version": "3.5.0",
   "status": "Under Developement!",
   "description": "Multi device whatsapp bot.",
   "main": "index.js",
@@ -9,7 +9,7 @@
     "node": ">=20.19.0 <21 || >=22.12.0"
   },
   "scripts": {
-    "start": "node --expose-gc index.js",
+    "start": "node launcher.js",
     "repair:sharp": "npm rebuild sharp --foreground-scripts"
   },
   "author": "Safful",
@@ -55,7 +55,6 @@
     "pg": "^8.11.3",
     "pm2": "^5.2.0",
     "pngjs": "^7.0.0",
-    "puppeteer": "latest",
     "qrcode": "latest",
     "secktor-pack": "latest",
     "sharp": "^0.35.4",

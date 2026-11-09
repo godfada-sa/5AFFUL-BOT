@@ -8,6 +8,10 @@ Use Node.js 22.12+ or 24, with FFmpeg installed.
 4. Run `npm start`, then link WhatsApp using the QR page or pairing method.
 5. Preserve the session directory and `.safful-data` across restarts.
 
+For two accounts, set `DEVICE_COUNT=2` and configure the `_2` variables from
+`.env.example`. Preserve `.safful-devices` as well; it contains device 2's
+session and local runtime state. Each device must use a different port.
+
 The archive excludes local credentials, `.env`, runtime data and `node_modules`.
 
 ## Commands

@@ -3,7 +3,7 @@ const path = require('path')
 const { spawn } = require('child_process')
 const { cmd } = require('../lib/plugins')
 const { isOwner } = require('../lib/safful-mode')
-const sessionGuard = require('../lib/safful-session-guard')
+const sessionGuard = require('../lib/safful-session-guard-v2')
 const sessionStore = require('../lib/safful-update-session')
 
 const PROJECT_ROOT = path.resolve(__dirname, '..')

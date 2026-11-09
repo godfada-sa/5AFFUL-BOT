@@ -11,6 +11,7 @@ node_modules/
 video-frames/
 .freebuff/
 .work/
+.safful-devices/
 
 # ── Environment & secrets ────────────────────────────────────
 .env
@@ -80,4 +81,5 @@ desktop.ini
 .vscode/
 
 # ── Build artifacts (never in the source tree) ───────────────
+releases/
 *.zip

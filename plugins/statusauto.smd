@@ -64,10 +64,6 @@ function remember(set, id) {
 }
 
 // ── receipts ───────────────────────────────────────────────────────────────
-function statusSender(key) {
-  return key?.participant || key?.participantAlt || ''
-}
-
 function normalizedAuthor(value) {
   const jid = String(value || '').replace(/:\d+@/, '@')
   return /^\d+@(?:s\.whatsapp\.net|lid)$/.test(jid) ? jid : ''
@@ -170,9 +166,10 @@ function onMessages({ messages } = {}) {
     const key = message?.key
     if (!key?.id || key.remoteJid !== 'status@broadcast' || key.fromMe || message.statusAlreadyViewed) continue
     // Never auto-view the owner's own statuses.
-    const senderNumber = String(statusSender(key)).split('@')[0].replace(/\D/g, '')
     const ownerNumber = String(process.env.OWNER_NUMBER || global.owner || '').replace(/\D/g, '')
-    if (ownerNumber && senderNumber && senderNumber === ownerNumber) continue
+    const authors = [normalizedAuthor(key.participant), normalizedAuthor(key.participantAlt)].filter(Boolean)
+    const self = [socket.user?.id, socket.user?.lid].map(normalizedAuthor)
+    if (!authors.length || authors.some(jid => self.includes(jid) || jid === ownerNumber + '@s.whatsapp.net')) continue
     if (pending.has(key.id) || seenIds.has(key.id)) continue
     const delayMs = mode === 'instant' ? 0 : Number(mode) * 60 * 1000
     const queuedAt = Date.now()
@@ -198,6 +195,19 @@ function attach(target) {
     try { statusSave = require('../lib/safful-status-save') } catch { statusSave = null }
   }
   statusSave?.attach?.(target)
+  // New personal statuses can arrive as top-level packets with no upsert.
+  // Their envelope supplies the receipt key. Subscribe to the broadcast
+  // route only; the generic CB:status listener independently handles ACKs.
+  target.ws?.on?.('CB:status,from:status@broadcast', node => {
+    const attrs = node?.attrs
+    if (target !== socket || node?.tag !== 'status' || attrs?.from !== 'status@broadcast' || !attrs.id) return
+    if (attrs.type && !['text', 'media'].includes(attrs.type)) return
+    if (attrs.t && Date.now() / 1000 - Number(attrs.t) >= 86400) return
+    const participant = normalizedAuthor(attrs.participant)
+    if (!participant) return
+    const participantAlt = normalizedAuthor(attrs.participant_pn) || normalizedAuthor(attrs.participant_lid)
+    onMessages({ messages: [{ key: { id: attrs.id, remoteJid: attrs.from, participant, participantAlt } }] })
+  })
   // Ride the raw dispatcher when present (pre-serialization statuses),
   // otherwise fall back to the normal event.
   if (target.__saffulRawDispatcher?.onUpsert) target.__saffulRawDispatcher.onUpsert(onMessages)

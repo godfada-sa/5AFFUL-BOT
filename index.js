@@ -1,3 +1,16 @@
+// Pterodactyl panels often launch `node index.js` directly and therefore skip
+// package.json's `npm start` command. Hand that entry path to the supervisor
+// for both single and dual account setups. Workers carry SAFFUL_DEVICE_ID, which
+// prevents them from recursively launching another supervisor.
+require('dotenv').config({ path: `${__dirname}/.env` })
+const __saffulNeedsSupervisor = require.main === module &&
+  !process.env.SAFFUL_DEVICE_ID
+
+if (__saffulNeedsSupervisor) {
+  process.stdout.write(`[launcher] DEVICE_COUNT=${require('./launcher').deviceCount()} detected through index.js; starting account workers\n`)
+  require('./launcher').launch()
+} else {
+
 // ---------------------------------------------------------------------------
 // Node engine guard.
 // ---------------------------------------------------------------------------
@@ -19,39 +32,6 @@ function saffulCheckNodeVersion() {
 }
 saffulCheckNodeVersion()
 
-// ── Uptime Guardian ──────────────────────────────────────────────────────
-// Override process.exit BEFORE any require() so all modules get it.
-// After first successful connection, suppresses exit(1) on reconnectable
-// disconnects (515/408) for 15 seconds while Baileys reconnects.
-// ──────────────────────────────────────────────────────────────────────────
-const __uptime = {
-  active: false,
-  reconnectCount: 0,
-  suppressUntil: 0,
-  origExit: process.exit.bind(process),
-}
-process.exit = function (code) {
-  if (!global.__saffulAllowHardExit && __uptime.active && __uptime.suppressUntil > Date.now() && code !== 0) {
-    process.stdout.write('[uptime] Suppressing process.exit(' + code + ') — reconnectable disconnect.\n')
-    return
-  }
-  return __uptime.origExit(code)
-}
-global.__saffulUptimeSuppress = function (ms) {
-  if (!__uptime.active) {
-    // Activation is silent — the guardian's value only shows when it acts
-    // (reconnectable disconnect suppressed, reconnect preserved).
-    __uptime.active = true
-  }
-  __uptime.reconnectCount += 1
-  __uptime.suppressUntil = Date.now() + ms
-}
-global.__saffulUptimeReconnected = function () {
-  if (__uptime.reconnectCount > 0) {
-    process.stdout.write('[uptime] Reconnected after ' + __uptime.reconnectCount + ' suppressed disconnect(s) — uptime preserved\n')
-    __uptime.reconnectCount = 0
-  }
-}
 
 const fs = require('fs')
 const path = require('path')
@@ -83,6 +63,7 @@ require(__dirname + '/lib/safful-history-mode')
 require(__dirname + '/lib/safful-responsive-qr').installResponsiveQrPage()
 require(__dirname + '/lib/safful-rename-session')
 require(__dirname + '/lib/safful-fork-bypass')
+require(__dirname + '/lib/safful-core-compatibility').authorizeBundledCore()
 const { installOutgoingMessagePolicy, rebrandSocket } = require(__dirname + '/lib/safful-outgoing-message-policy')
 installOutgoingMessagePolicy()
 const preserveMobileNotifications = require(__dirname + '/lib/safful-mobile-notifications')
@@ -252,33 +233,23 @@ const start = async () => {
       if (!global.__saffulQrWatcherInstalled) {
         global.__saffulQrWatcherInstalled = true
         const qrcode = require('qrcode')
+        const { renderTerminalQr } = require(__dirname + '/lib/safful-terminal-qr')
         const rawOut = process.__saffulRawStdout || process.stdout.write.bind(process.stdout)
         let _lastQr = ''
         const printQr = () => {
           if (!global.qr || global.qr === _lastQr) return
           _lastQr = global.qr
-          qrcode.toString(global.qr, { type: 'terminal', small: true, margin: 1 }, (err, str) => {
-            if (err || !str) return
-            const lines = str.split('\n')
-            const visibleLen = (l) => l.replace(/\x1b\[[0-9;]*m/g, '').length
-            const qrWidth = Math.max(...lines.map(visibleLen))
-            // Pterodactyl runs the bot on a pipe (no TTY → columns is
-            // undefined). Centering to a guessed 80 pushed the QR past the
-            // visible width on smaller panels, where the console wrapped the
-            // rows and the QR came out distorted. When the real width is
-            // unknown, frame the QR at a compact 56 columns so it never
-            // wraps on narrow consoles; real terminals still center to their
-            // true width.
-            const hasRealWidth = process.stdout.columns && process.stdout.columns >= 60
-            const frame = hasRealWidth ? Math.min(process.stdout.columns, 120) : 56
-            const pad = qrWidth < frame ? Math.max(2, Math.floor((frame - qrWidth) / 2)) : 1
-            const centered = lines.map((l) => ' '.repeat(pad) + l).join('\n')
+          renderTerminalQr(qrcode, global.qr).then(({ output, mode }) => {
             const port = global.port || process.env.PORT || ''
             const urlHint = port
               ? `\n  ── QR web page: http://<your-server-ip>:${port}/qr ──\n`
               : '\n'
-            rawOut('\n  ── Scan this QR with WhatsApp ──\n\n' + centered + urlHint + '\n')
-          })
+            // Do not center or indent the QR. Panel consoles are often narrow
+            // pipes; even harmless padding can wrap a row and make it appear
+            // much larger or impossible to scan.
+            const device = process.env.SAFFUL_DEVICE_ID || '1'
+            rawOut(`\n── Device ${device}: scan this ${mode || 'compact'} QR with WhatsApp ──\n\n` + output + urlHint + '\n')
+          }).catch(() => {})
         }
         setInterval(printQr, 2000).unref()
       }
@@ -303,6 +274,7 @@ const start = async () => {
     } catch (probeError) { process.stdout.write(`[boot] WARNING: cannot reach web.whatsapp.com — ${probeError?.message || probeError}\n`) }
 
     const socket = await bot.connect()
+    require('./lib/safful-reconnect-watchdog').watch(socket)
     global.__saffulLatestSocket = socket
     process.stdout.write('[boot] socket created\n')
 
@@ -338,22 +310,6 @@ const start = async () => {
     notifyConnectedOnce(socket)
     process.stdout.write('[boot] hooks attached — ready\n')
 
-    // Uptime Guardian activation
-    const RECONNECTABLE_CODES = new Set([408, 515])
-    let _guardianActivated = false
-    socket.ev?.on?.('connection.update', (update = {}) => {
-      if (update.connection === 'open') {
-        if (!_guardianActivated) { _guardianActivated = true; global.__saffulUptimeSuppress(0) }
-        global.__saffulUptimeReconnected()
-      }
-      if (_guardianActivated && update.connection === 'close') {
-        const statusCode = update?.lastDisconnect?.error?.output?.statusCode || update?.lastDisconnect?.error?.data?.statusCode
-        if (RECONNECTABLE_CODES.has(statusCode)) {
-          global.__saffulUptimeSuppress(15000)
-          process.stdout.write(`[uptime] Reconnectable disconnect (code ${statusCode}) — suppressing exit for 15s.\n`)
-        }
-      }
-    })
 
     // Memory Watchdog (escalating — never kill on a transient spike)
     let memHighPending = false
@@ -397,3 +353,4 @@ const start = async () => {
   }
 }
 start()
+}

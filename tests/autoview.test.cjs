@@ -50,6 +50,62 @@ function setup(t, saved) {
 function status(id) { return {key:{id,remoteJid:'status@broadcast',participant:'900003@lid',participantAlt:'233240000003@s.whatsapp.net',fromMe:false},message:{conversation:'status'}} }
 const settle = () => new Promise(resolve=>setImmediate(resolve))
 
+test('E2E: autoview command to decoded WhatsApp wire receipts for a top-level status', async t => {
+  const h = setup(t)
+  const { default: makeSocket, initAuthCreds, decodeBinaryNode, NOISE_WA_HEADER } = require('@whiskeysockets/baileys')
+  const { WebSocketClient } = require('@whiskeysockets/baileys/lib/Socket/Client/websocket.js')
+  const frames = []
+  t.mock.method(WebSocketClient.prototype, 'connect', function () {
+    this.socket = { readyState: 1, send(bytes, done) { frames.push(bytes); done() } }
+  })
+  t.mock.method(WebSocketClient.prototype, 'close', async function () { this.socket = null })
+  const creds = initAuthCreds()
+  creds.me = { id: '1000@s.whatsapp.net' }
+  const socket = makeSocket({ auth: { creds, keys: { get: async () => ({}), set: async () => {} } },
+    logger: require('pino')({ level: 'silent' }) })
+  t.after(() => socket.end())
+  require('../lib/safful-reconnect-watchdog').watch(socket)
+  require('../lib/safful-mobile-notifications')(socket)
+  await h.commands[0].fn({fromMe:true,reply:async()=>{}}, 'on', {Void:socket})
+  const attrs = { id:'wire', from:'status@broadcast', participant:'900003@lid', type:'media' }
+  const node = { tag:'status', attrs, content:[{tag:'enc',attrs:{type:'skmsg'}}] }
+  socket.ws.emit('CB:status,from:status@broadcast',node)
+  socket.ws.emit('CB:status',node)
+  await settle()
+  const packets = await Promise.all(frames.map((frame,i) => decodeBinaryNode(frame.subarray(3+(i===0?NOISE_WA_HEADER.length:0)))))
+  assert.equal(packets.length,3)
+  assert.equal(packets.filter(p=>p.tag==='ack' && p.attrs.class==='status').length,1)
+  const reads=packets.filter(p=>p.tag==='receipt' && p.attrs.type==='read')
+  assert.equal(reads.length,2)
+  assert.ok(reads.some(p=>p.attrs.class==='status'))
+  assert.ok(reads.every(p=>p.attrs.id==='wire' && p.attrs.to==='status@broadcast' && p.attrs.participant==='900003@lid'))
+})
+
+test('E2E: personal status packet produces transport ACK and configured view receipts, once across redelivery', async t => {
+  const h=setup(t),s=h.socket(),acks=[]
+  s.ws=new EventEmitter()
+  s.sendMessageAck=async node=>acks.push(node.attrs.id)
+  s.user={ id:'123@s.whatsapp.net',lid:'456@lid' }
+  h.engine.attach(s)
+  require('../lib/safful-reconnect-watchdog').watch(s)
+  function deliver(id, participant='900003@lid') {
+    const node={ tag:'status', attrs:{id,from:'status@broadcast',participant,type:'media'}, content:[{tag:'enc'}] }
+    s.ws.emit('CB:status,from:status@broadcast',node)
+    s.ws.emit('CB:status',node)
+  }
+  deliver('disabled'); assert.equal(s.receipts.length,0)
+  h.engine.setMode('1'); deliver('delayed')
+  await h.tick(59999); assert.equal(s.receipts.length,0)
+  await h.tick(1); assert.equal(s.receipts.length,1)
+  h.engine.setMode('on'); deliver('wire')
+  s.ev.emit('messages.upsert',{messages:[status('wire')]})
+  deliver('self','456@lid');deliver('newsletter','123@newsletter')
+  await settle()
+  assert.equal(s.receipts.length,2); assert.equal(s.selfReceipts.length,2)
+  assert.deepEqual(s.selfReceipts.at(-1),['status@broadcast','900003@lid',['wire'],'read','status'])
+  assert.deepEqual(acks,['disabled','delayed','wire','self','newsletter'])
+})
+
 test('on views immediately using correct broadcast receipt; duplicates are skipped',async t=>{
   const h=setup(t),s=h.socket();h.engine.attach(s);h.engine.setMode('on')
   s.ev.emit('messages.upsert',{messages:[status('a')]});await settle()
