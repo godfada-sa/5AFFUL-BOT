@@ -28,6 +28,7 @@ const ROOT_EXCLUDES = new Set([
   '.safful-data',
   '.safful-devices',
   '.safful-quarantine',
+  '.safful-secrets',
   '.yarn',
   'node_modules',
   'releases',
@@ -88,8 +89,8 @@ function shouldCopy(source) {
   if (!relative || relative.startsWith('..')) return true
   const parts = relative.split(path.sep)
   if (ROOT_EXCLUDES.has(parts[0])) return false
-  // Keep each account's persisted autoview and anti-delete choices on restart.
-  if (parts[0] === 'lib' && /^safful-(?:autoview|protection)\.json(?:\.tmp)?$/.test(parts[1])) return false
+  // Keep each account's persisted viewing, deletion and status-saving choices.
+  if (parts[0] === 'lib' && /^safful-(?:autoview|protection|status-save)\.json(?:\.tmp)?$/.test(parts[1])) return false
   if (parts.some((part) => SESSION_NAMES.test(part))) return false
   if (/\.zip$/i.test(parts.at(-1))) return false
   return true
@@ -166,10 +167,20 @@ function launch(options = {}) {
     const child = spawn(process.execPath, ['--expose-gc', entry], {
       cwd: runtime,
       env,
-      stdio: 'inherit',
+      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
       windowsHide: true,
     })
     children.set(device, child)
+
+    child.on('message', message => {
+      if (message?.type !== 'safful:restart-deployment' || stopping || children.get(device) !== child) return
+      process.stdout.write('[launcher] Update requested a deployment restart; stopping all account workers.\n')
+      stop('SIGTERM')
+      process.exitCode = 1
+      // Exit non-zero so the panel restarts the supervisor and loads its new
+      // code too. Give workers a chance to stop before forcing the parent exit.
+      setTimeout(() => process.exit(1), 2000).unref()
+    })
 
     child.on('exit', (code, signal) => {
       children.delete(device)

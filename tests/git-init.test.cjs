@@ -14,6 +14,7 @@ function load({ head = false, saved = true, remote = 'https://github.com/godfada
       if (name === '../lib/safful-update-session') return { restoreLatestIfNeeded: () => ({ current: true }) }
       if (name === './owner-tools') return {
         PROJECT_ROOT: '/fixture', shortResult: () => 'failure',
+        withUpdateLock: async (_message, action) => action(),
         runUpdate: async () => state.updates++,
         protectSession: async () => { state.snapshots++; return { saved, reason: 'No session' } },
         resolveUpdateBranch: async () => 'main',

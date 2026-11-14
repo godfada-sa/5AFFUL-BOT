@@ -46,5 +46,5 @@ async function save(message, _text, meta = {}) {
   }
 }
 
-cmd({ pattern: 'save', alias: ['dlstatus', 'statusdl', 'swdl', 'savestatus', 'statussave'], desc: 'Save replied status media or text to sudo', category: 'downloader', filename: __filename }, save)
+cmd({ pattern: 'save', alias: ['dlstatus', 'statusdl', 'swdl'], desc: 'Save replied status media or text to sudo', category: 'downloader', filename: __filename }, save)
 module.exports = { save, inspectContent, quotedReference, rawQuotedPayload, originalFromStore, bufferFrom, mediaPayload }

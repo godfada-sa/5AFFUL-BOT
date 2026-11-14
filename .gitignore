@@ -27,6 +27,9 @@ npmrc
 # Matches by basename so it covers the session dir wherever the
 # (obfuscated) core decides to create it — lib/, root, etc.
 creds.json
+Safful_Session/
+Safful_Baileys/
+Suhail_Baileys/
 Suhail-X/
 Suhail-X*/
 Suhail_X/
@@ -44,8 +47,11 @@ store.json
 
 # ── Bot runtime state & data ─────────────────────────────────
 .safful-data/
+.safful-secrets/
 lib/safful-autoview.json
 lib/safful-autoview.json.tmp
+lib/safful-status-save.json
+lib/safful-status-save.json.tmp
 botstate.json
 state.json
 *.db

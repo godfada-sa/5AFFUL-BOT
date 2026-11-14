@@ -5,8 +5,16 @@ const { cmd } = require('../lib/plugins')
 const { isOwner } = require('../lib/safful-mode')
 const sessionGuard = require('../lib/safful-session-guard-v2')
 const sessionStore = require('../lib/safful-update-session')
+const { deploymentRoot, protectedUpdatePath, acquireUpdateLock } = require('../lib/safful-deployment')
 
-const PROJECT_ROOT = path.resolve(__dirname, '..')
+const PROJECT_ROOT = deploymentRoot(path.resolve(__dirname, '..'))
+
+async function withUpdateLock(message, action) {
+  let release
+  try { release = acquireUpdateLock(PROJECT_ROOT) }
+  catch (error) { return message.reply('❌ ' + error.message) }
+  try { return await action() } finally { release() }
+}
 
 function runProcess(command, args, timeoutMs = 180000) {
   return new Promise(resolve => {
@@ -127,11 +135,30 @@ async function protectSession(label) {
   return backup
 }
 
-function scheduleControlledRestart(delayMs = 2500) {
+function scheduleControlledRestart(delayMs = 2500, allDevices = false) {
+  if (allDevices && process.send && process.connected) {
+    setTimeout(() => process.send({ type: 'safful:restart-deployment' }), delayMs).unref?.()
+    return
+  }
   global.__saffulAllowHardExit = true
   // A successful exit is treated as a manual stop by many Node panels. A
   // controlled non-zero exit makes PM2/Pterodactyl restart the service.
   setTimeout(() => process.exit(1), delayMs).unref?.()
+}
+
+async function restartUpdatedDeployment(message) {
+  if (process.env.SAFFUL_DEVICE_ID && (!process.send || !process.connected)) {
+    return message.reply('✅ Code is ready and linked sessions are preserved. Restart the panel once to load it for both accounts and activate the updated launcher.')
+  }
+  await message.reply('✅ Code is ready and linked sessions are preserved. Restarting the deployment to load it for all accounts…')
+  scheduleControlledRestart(2500, true)
+}
+
+async function installUpdatedDependencies(message) {
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+  const result = await runProcess(npmCommand, ['install', '--omit=dev', '--no-audit', '--no-fund'], 8 * 60 * 1000)
+  if (!result.ok) await message.reply(`❌ Code is on disk and sessions are preserved, but dependency installation failed. Restart cancelled.\n${shortResult(result)}`)
+  return result.ok
 }
 
 async function resolveUpdateBranch(currentBranch, run = runProcess) {
@@ -155,8 +182,7 @@ async function initializeCheckout(branch, { root = PROJECT_ROOT, run = runProces
   const incoming = pathsFromGit(tree)
   // Repository files must never replace authentication, local configuration, or backups.
   for (const name of incoming) {
-    if (!safeProjectFile(name, root) || /^(?:\.git|\.env|\.safful-data|\.safful-secrets|node_modules)(?:\/|$)/i.test(name) ||
-        /^lib\/(?:Safful_Session|Suhail_Baileys)(?:\/|$)/i.test(name)) {
+    if (!safeProjectFile(name, root) || protectedUpdatePath(name)) {
       throw new Error(`Initialization cancelled: protected or unsafe incoming path ${name}`)
     }
   }
@@ -171,12 +197,13 @@ async function initializeCheckout(branch, { root = PROJECT_ROOT, run = runProces
   return backup
 }
 
-async function runUpdate(message, { restart = true } = {}) {
+async function runUpdate(message, { restart = true, locked = false } = {}) {
+  if (!locked) return withUpdateLock(message, () => runUpdate(message, { restart, locked: true }))
   if (!fs.existsSync(path.join(PROJECT_ROOT, '.git'))) {
-    return message.reply('❌ Update unavailable: this installation has no `.git` folder. Install from the GitHub repository first.')
+    return message.reply('❌ Update unavailable: this installation has no `.git` folder. Run `.gitinit` first.')
   }
 
-  await message.reply('🔐 Saving the current WhatsApp session…')
+  await message.reply('🔐 Saving the linked WhatsApp sessions for this deployment…')
   const backup = await protectSession('gitpull')
   if (!backup.saved) {
     return message.reply(`❌ Update cancelled. ${backup.reason} This prevents an unexpected repair request.`)
@@ -189,19 +216,25 @@ async function runUpdate(message, { restart = true } = {}) {
   const branch = await resolveUpdateBranch(String(branchResult.stdout || '').trim())
   if (!branch) return message.reply('Update cancelled: no published update branch was found on origin.')
 
+  const head = await runProcess('git', ['rev-parse', '--verify', 'HEAD'], 30000)
+  if (!head.ok) return message.reply('❌ Git initialization is incomplete (no local HEAD commit). Run `.gitinit` to safely finish setup, then `.update`.')
+
   const countsResult = await runProcess('git', ['rev-list', '--left-right', '--count', `HEAD...origin/${branch}`], 30000)
   if (!countsResult.ok) return message.reply(`❌ Could not compare updates.\n${shortResult(countsResult)}`)
   const [ahead = 0, behind = 0] = String(countsResult.stdout).trim().split(/\s+/).map(Number)
   if (ahead > 0) return message.reply(`❌ Update cancelled: this installation has ${ahead} local commit(s) not on GitHub.`)
   if (!behind) {
     if (!restart) return message.reply('✅ Repository is already up to date. Session preserved.')
-    await message.reply('✅ Repository is already up to date. Restarting to load the installed code; session preserved.')
-    scheduleControlledRestart()
+    if (!sessionStore.restoreLatestIfNeeded().current) return message.reply('❌ Session validation failed. Restart cancelled.')
+    if (!await installUpdatedDependencies(message)) return
+    await restartUpdatedDeployment(message)
     return
   }
 
-  const head = await runProcess('git', ['rev-parse', '--verify', 'HEAD'], 30000)
-  if (!head.ok) return message.reply('❌ Git initialization is incomplete (no local HEAD commit). Run `.gitinit` to safely finish setup, then `.update`.')
+  const tree = await runProcess('git', ['ls-tree', '-r', '--name-only', '-z', `origin/${branch}`], 30000)
+  if (!tree.ok || pathsFromGit(tree).some(name => !safeProjectFile(name) || protectedUpdatePath(name))) {
+    return message.reply('❌ Update cancelled: the incoming repository could not be inspected or contains protected session/configuration paths.')
+  }
 
   await message.reply(`⬇️ Installing ${behind} update commit(s)…`)
   let collisionBackup
@@ -235,16 +268,11 @@ async function runUpdate(message, { restart = true } = {}) {
     return message.reply('❌ Code updated, but session recovery validation failed. Restart cancelled to avoid requesting repair.')
   }
 
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-  const installResult = await runProcess(npmCommand, ['install', '--omit=dev', '--no-audit', '--no-fund'], 8 * 60 * 1000)
-  if (!installResult.ok) {
-    return message.reply(`❌ Code updated and session preserved, but dependency installation failed.\n${shortResult(installResult)}`)
-  }
+  if (!await installUpdatedDependencies(message)) return
 
   try { await sessionGuard.backupSession() } catch {}
   if (restart) {
-    await message.reply('✅ Update installed and session preserved. Restarting once to load the new code…')
-    scheduleControlledRestart()
+    await restartUpdatedDeployment(message)
   } else {
     await message.reply('✅ Repository pulled and session preserved. Use `.update` to load the new code.')
   }
@@ -307,4 +335,6 @@ module.exports = {
   restorePanelEnv,
   resolveUpdateBranch,
   initializeCheckout,
+  withUpdateLock,
+  restartUpdatedDeployment,
 }

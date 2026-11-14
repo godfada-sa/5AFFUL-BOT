@@ -7,6 +7,22 @@ const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 const test = require('node:test')
 
+test('E2E: update requested by device 2 stops both workers and exits the supervisor for panel restart', t => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'safful-restart-all-'))
+  t.after(() => fs.rmSync(scratch, { recursive: true, force: true }))
+  const output = path.join(scratch, 'workers.jsonl')
+  const result = spawnSync(process.execPath, ['launcher.js'], {
+    cwd: path.join(__dirname, '..'), encoding: 'utf8', timeout: 20000, windowsHide: true,
+    env: { ...process.env, DEVICE_COUNT: '2', SAFFUL_E2E_OUTPUT: output,
+      SAFFUL_LAUNCHER_ONESHOT: 'false', SAFFUL_WORKER_ENTRY: 'tests/fixtures/deployment-restart-worker.cjs' },
+  })
+  assert.equal(result.status, 1, result.stderr || result.error?.message || result.stdout)
+  assert.match(result.stdout, /stopping all account workers/)
+  const workers = fs.readFileSync(output, 'utf8').trim().split('\n').map(JSON.parse)
+  assert.equal(workers.length, 2)
+  for (const worker of workers) assert.throws(() => process.kill(worker.pid, 0), /ESRCH/)
+})
+
 test('E2E: a stalled stream-ACK worker exits and the supervisor starts its replacement', { timeout: 55000 }, async t => {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'safful-ack-'))
   t.after(() => fs.rmSync(scratch, { recursive: true, force: true }))

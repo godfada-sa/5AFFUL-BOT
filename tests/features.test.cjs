@@ -8,9 +8,15 @@ const baileys = require('@whiskeysockets/baileys')
 const root = path.resolve(__dirname, '..')
 const logger = { trace() {}, debug() {}, info() {}, warn() {}, error() {}, child() { return this } }
 const settle = () => new Promise(resolve => setImmediate(resolve))
+async function until(predicate) {
+  const deadline = Date.now() + 2000
+  while (!predicate() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5))
+  assert.ok(predicate(), 'asynchronous media operation completed')
+}
 
 function setup(t) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ghana-test-'))
+  fs.mkdirSync(path.join(temp, 'lib'))
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }))
   const registry = [], cache = new Map(), state = { downloads: [], fail: false, global: {}, intervals: [] }
   const env = { SUDO: '233240000001,233240000002',
@@ -40,7 +46,7 @@ function setup(t) {
       return realRequire(name)
     }
     vm.runInNewContext(fs.readFileSync(filename, 'utf8'), { require: req, module: mod, exports: mod.exports,
-      __dirname: relative === 'lib/safful-protection.js' ? temp : path.dirname(filename), __filename: filename, Buffer, structuredClone, process: fakeProcess,
+      __dirname: relative === 'lib/safful-protection.js' ? path.join(temp, 'lib') : path.dirname(filename), __filename: filename, Buffer, structuredClone, process: fakeProcess,
       global: state.global, console, setTimeout, clearTimeout,
       setInterval: fn => { state.intervals.push(fn); return { unref() {}, fn } },
       clearInterval: timer => { if (timer) timer.cleared = true } }, { filename })
@@ -87,6 +93,48 @@ test('E2E: anti-delete delivers the revoked attachment and notice to the first c
     await protection.reforwardDeletedMessage({ relayMessage: async (_, content) => { relayed = content } }, batch[0][0], original)
     assert.ok(relayed[kind+'Message'], 'relay must select media over metadata')
   }
+})
+
+test('E2E: anti-delete recovers received view-once photos, videos and voice notes after deletion', async t => {
+  const h = setup(t), protection = h.load('lib/safful-protection.js'), s = h.socket(true)
+  protection.setAntiDelete(true)
+  protection.installSocketRawCapture(s)
+  protection(s)
+  t.after(() => s.ev.flush())
+  for (const [wrapper, kind] of [
+    ['viewOnceMessage', 'imageMessage'], ['viewOnceMessageV2', 'videoMessage'],
+    ['viewOnceMessageV2Extension', 'audioMessage'], ['key-flag', 'imageMessage'],
+    ['viewOnceMessageV2Extension', 'ptvMessage'],
+  ]) {
+    h.state.fail = false
+    s.ev.buffer()
+    const downloadsBefore = h.state.downloads.length
+    const raw = media('deleted-' + wrapper + kind, kind)
+    const content = { [kind]: {
+      directPath: '/valid', viewOnce: true, caption: 'original caption',
+      mimetype: kind === 'audioMessage' ? 'audio/ogg' : undefined, ptt: kind === 'audioMessage',
+    } }
+    raw.message = { [wrapper]: { message: content } }
+    if (wrapper === 'key-flag') {
+      raw.message = content
+      raw.key.isViewOnce = true
+      delete content[kind].viewOnce
+    }
+    s.ev.emit('messages.upsert', { type: 'notify', messages: [raw] })
+    await until(() => h.state.downloads.length > downloadsBefore)
+    h.state.fail = true // recovery must now use the previously captured bytes
+    raw.message = { conversation: 'serializer replaced the original' }
+    s.ev.flush()
+    s.ev.emit('messages.update', [{ key: raw.key, update: { message: null, messageStubType: 1 } }])
+    await until(() => s.sent.length >= 2)
+    const batch = s.sent.splice(0), field = kind === 'ptvMessage' ? 'video' : kind.replace('Message', '')
+    assert.equal(batch.length, 2, wrapper + ': attachment and notice')
+    assert.ok(batch.every(([to]) => to === '233240000001@s.whatsapp.net'))
+    assert.equal(batch[0][1][field].toString(), 'media bytes')
+    assert.equal(batch[0][1].viewOnce, undefined)
+    if (kind === 'audioMessage') assert.equal(batch[0][1].ptt, true)
+  }
+  s.ev.flush()
 })
 
 test('E2E: antiviewonce command enforces permissions, contact rules and DM delivery', async t => {

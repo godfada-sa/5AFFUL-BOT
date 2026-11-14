@@ -5,21 +5,25 @@ const path = require('path')
 const { cmd } = require('../lib/plugins')
 const { isOwner } = require('../lib/safful-mode')
 const { PROJECT_ROOT, runProcess, runUpdate, shortResult, protectSession,
-  initializeCheckout, resolveUpdateBranch } = require('./owner-tools')
+  initializeCheckout, resolveUpdateBranch, withUpdateLock } = require('./owner-tools')
 const sessionStore = require('../lib/safful-update-session')
 
 const REPO_URL = String(process.env.GIT_REPO_URL || 'https://github.com/godfada-sa/5AFFUL-BOT.git').trim()
 
 async function gitInit(message) {
   if (!isOwner(message)) return message.reply('❌ Owner only.')
+  return withUpdateLock(message, () => gitInitLocked(message))
+}
+
+async function gitInitLocked(message) {
   const exists = fs.existsSync(path.join(PROJECT_ROOT, '.git'))
   if (exists) {
     const head = await runProcess('git', ['rev-parse', '--verify', 'HEAD'], 30000)
-    if (head.ok) return runUpdate(message, { restart: false })
+    if (head.ok) return runUpdate(message, { restart: false, locked: true })
   }
   const version = await runProcess('git', ['--version'], 30000)
   if (!version.ok) return message.reply(`❌ Git is unavailable: ${shortResult(version)}`)
-  await message.reply('🔐 Saving the current WhatsApp session before repository setup…')
+  await message.reply('🔐 Saving all linked WhatsApp sessions before repository setup…')
   const session = await protectSession('gitinit')
   if (!session.saved) return message.reply(`❌ Initialization cancelled: ${session.reason}`)
   if (!exists) {
@@ -44,7 +48,7 @@ async function gitInit(message) {
   } catch (error) {
     return message.reply(`❌ Repository setup stopped safely: ${error.message}`)
   }
-  return message.reply('✅ Repository initialized and pulled. Session untouched. Use `.update` to deploy/restart.')
+  return message.reply('✅ Main repository initialized and pulled. Linked sessions preserved. Use `.update` to install dependencies and restart all accounts.')
 }
 
 cmd({ pattern: 'gitinit', alias: ['gitsetup', 'gitfix'], desc: 'Fetch GitHub repository without restarting or deleting session', category: 'owner', filename: __filename }, gitInit)
