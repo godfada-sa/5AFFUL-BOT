@@ -1,4 +1,4 @@
-# 5AFFUL BOT V3.5
+# 5AFFUL BOT V3.6
 
 Safful-Md is a WhatsApp multi-device bot powered by Baileys.
 

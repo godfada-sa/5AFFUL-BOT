@@ -256,19 +256,17 @@ function installCommand() {
     settings.contacts = Array.from(new Set((settings.contacts || []).map(numberFrom).filter(Boolean)))
 
     if (!input || input === 'status') {
-      const contacts = settings.contacts.length ? settings.contacts.map(number => `+${number}`).join(', ') : 'none'
-      const retryMinutes = Math.round(RETRY_WINDOW_MS / 60000)
-      return message.reply(`🔓 *Anti-view-once*\nGlobal: *${settings.global ? 'ON' : 'OFF'}*\nContacts: ${contacts}\nSince restart: detected ${stats.detected}, sent ${stats.sent}, recovered ${stats.recovered}, failed ${stats.failed}, unavailable notices ${stats.unavailable} (retrying for ${retryMinutes} min).\n${stats.lastError ? 'Last error: ' + stats.lastError + '\n' : ''}Unavailable means WhatsApp did not supply downloadable media to this linked device yet — it is retried for ${retryMinutes} minutes in case it arrives late.\n\nUse \`.antiviewonce on\` for global, or \`.antiviewonce <number>\` for one contact.`)
+      return message.reply(`Anti-view-once: ${settings.global ? 'ON' : 'OFF'}\nContact rules: ${settings.contacts.length}\nSent: ${stats.sent} | Recovered: ${stats.recovered} | Failed: ${stats.failed} | Unavailable: ${stats.unavailable}`)
     }
     if (input === 'on' || input === 'enable') {
       settings.global = true
       saveSettings(settings)
-      return message.reply('🔓 Anti-view-once is now *ON globally*.')
+      return message.reply('Anti-view-once: ON globally.')
     }
     if (input === 'off' || input === 'disable') {
       settings.global = false
       saveSettings(settings)
-      return message.reply('🔒 Global anti-view-once is now *OFF*. Contact rules remain unchanged.')
+      return message.reply('Global anti-view-once: OFF.' + (settings.contacts.length ? ' Contact rules still apply.' : ''))
     }
 
     const disable = /^(off|remove|delete)\s+/.test(input)

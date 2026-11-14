@@ -15,7 +15,7 @@ async function configure(message, text, meta = {}) {
   if (!await isOperator(message, meta, meta.Void || message.bot)) return message.reply('Owner only.')
   const option = String(text || '').trim().toLowerCase()
   if (!option || ['status', 'get'].includes(option)) return message.reply(
-    `*AUTO STATUS REPLY*\nStatus: ${enabled ? 'ON' : 'OFF'}\nReply to a status with send/snd/sent to receive it.\nUse .astatus on or .astatus off.`)
+    `Auto status reply: ${enabled ? 'ON' : 'OFF'}.`)
   if (!['on', 'off'].includes(option)) return message.reply('Use .astatus on, off, or status.')
   try {
     fs.mkdirSync(path.dirname(settingsFile), { recursive: true })
@@ -24,7 +24,7 @@ async function configure(message, text, meta = {}) {
     enabled = option === 'on'
   } catch (error) {
     console.error('[astatus] settings failed:', error)
-    return message.reply('Could not save auto status reply settings; the setting was not changed.')
+    return message.reply('Could not save settings. Try again.')
   }
   return message.reply(`Auto status reply is ${enabled ? 'ON' : 'OFF'}.`)
 }
@@ -77,10 +77,10 @@ async function autoReply(message, text, meta = {}) {
       quoted?.quotedMessage?.conversation || context?.quotedMessage?.conversation)) {
       return await socket.sendMessage(message.chat, { text: fallbackText })
     }
-    return await message.reply('The original status is unavailable or WhatsApp supplied only a caption; I could not retrieve its media.')
+    return await message.reply('Status media unavailable.')
   } catch (error) {
     console.error('[astatus] status delivery failed:', error)
-    return message.reply('Could not retrieve or send this status. It may have expired; please try again later.')
+    return message.reply('Could not send this status. Try again.')
   }
 }
 

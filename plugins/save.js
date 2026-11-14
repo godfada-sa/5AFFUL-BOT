@@ -9,7 +9,7 @@ async function save(message, _text, meta = {}) {
   const socket = meta.Void || message.bot
   if (!await isOperator(message, meta, socket)) return message.reply('Owner only.')
   const destination = ownerJids(socket)[0]
-  if (!destination || !socket?.sendMessage) return message.reply('No sudo destination or bot connection is available.')
+  if (!destination || !socket?.sendMessage) return message.reply('Bot connection or sudo number unavailable.')
   const reference = quotedReference(message, meta)
   const quoted = message.quoted
   let original = await originalFromStore(meta.store, reference)
@@ -35,14 +35,14 @@ async function save(message, _text, meta = {}) {
     if (fallbackText && (original || quoted?.message?.conversation || quoted?.quotedMessage?.conversation)) {
       return socket.sendMessage(destination, { text: fallbackText })
     }
-    return message.reply('No downloadable status media found in this reply. The original may have expired or WhatsApp supplied only a caption.')
+    return message.reply('No status media found. Reply to a status.')
   }
   try {
     const bytes = await download(socket, found, original)
     await socket.sendMessage(destination, mediaPayload(found, bytes))
   } catch (error) {
     console.error('[save] media download failed:', error)
-    return message.reply(`Status media could not be downloaded: ${String(error.message || error).slice(0, 120)}`)
+    return message.reply('Status download failed. Try again.')
   }
 }
 

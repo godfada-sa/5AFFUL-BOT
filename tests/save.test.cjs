@@ -65,7 +65,7 @@ test('save does not send a caption when media download fails', async () => {
   const h = fixture({ message: { audioMessage: { directPath: '/old' } } }, null)
   await plugin.save(h.message, '', { store: h.store })
   assert.equal(h.sent.length, 0)
-  assert.match(h.replies[0], /could not be downloaded/)
+  assert.match(h.replies[0], /Status download failed/)
 })
 
 test('save supports true text statuses and document media', async () => {
@@ -83,7 +83,7 @@ test('save refuses caption-only quoted text when original status media is unavai
   const h = fixture({ message: { extendedTextMessage: { text: 'just the caption' } } }, null)
   await plugin.save(h.message, '', { store: h.store })
   assert.equal(h.sent.length, 0)
-  assert.match(h.replies[0], /No downloadable status media/)
+  assert.match(h.replies[0], /No status media found/)
 })
 
 test('save retries an expired media URL after WhatsApp re-uploads the original', async () => {

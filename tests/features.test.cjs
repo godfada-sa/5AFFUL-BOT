@@ -14,10 +14,10 @@ async function until(predicate) {
   assert.ok(predicate(), 'asynchronous media operation completed')
 }
 
-function setup(t) {
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ghana-test-'))
-  fs.mkdirSync(path.join(temp, 'lib'))
-  t.after(() => fs.rmSync(temp, { recursive: true, force: true }))
+function setup(t, previous) {
+  const temp = previous || fs.mkdtempSync(path.join(os.tmpdir(), 'ghana-test-'))
+  fs.mkdirSync(path.join(temp, 'lib'), { recursive: true })
+  if (!previous) t.after(() => fs.rmSync(temp, { recursive: true, force: true }))
   const registry = [], cache = new Map(), state = { downloads: [], fail: false, global: {}, intervals: [] }
   const env = { SUDO: '233240000001,233240000002',
     SAFFUL_CALLGUARD_FILE: path.join(temp, 'call.json'), SAFFUL_ANTIVIEWONCE_FILE: path.join(temp, 'avo.json') }
@@ -61,7 +61,7 @@ function setup(t) {
       rejectCall: async (...args) => { calls.push(args) }, updateBlockStatus: async (...args) => { blocks.push(args) },
       sendMessage: async (...args) => { sent.push(args) }, groupMetadata: async () => ({ subject: 'Friends', participants: [{id: '233240000003@s.whatsapp.net'}] }) }
   }
-  return { load, registry, state, socket, fakeModule, env }
+  return { load, registry, state, socket, fakeModule, env, temp }
 }
 function media(id='one', kind='imageMessage') { return { key: { id, remoteJid: '900003@lid', remoteJidAlt:'233240000003@s.whatsapp.net', fromMe:false }, message: { viewOnceMessageV2: { message: { [kind]: { viewOnce:true, directPath:'/valid', mediaKey:Buffer.alloc(32), caption:'hello' } } } } } }
 
@@ -125,6 +125,9 @@ test('E2E: anti-delete recovers received view-once photos, videos and voice note
     h.state.fail = true // recovery must now use the previously captured bytes
     raw.message = { conversation: 'serializer replaced the original' }
     s.ev.flush()
+    const cached = await protection.readCapturedViewOnce(raw.key.remoteJid, raw.key.id)
+    assert.equal(cached.bytes.toString(), 'media bytes', 'kk can reuse the original capture')
+    assert.equal(await protection.readCapturedViewOnce('different@g.us', raw.key.id), null, 'no ID-only cross-chat recovery')
     s.ev.emit('messages.update', [{ key: raw.key, update: { message: null, messageStubType: 1 } }])
     await until(() => s.sent.length >= 2)
     const batch = s.sent.splice(0), field = kind === 'ptvMessage' ? 'video' : kind.replace('Message', '')
@@ -135,6 +138,20 @@ test('E2E: anti-delete recovers received view-once photos, videos and voice note
     if (kind === 'audioMessage') assert.equal(batch[0][1].ptt, true)
   }
   s.ev.flush()
+})
+
+test('kk can read a key-flag-only view-once capture after a restart', async t => {
+  const h = setup(t), protection = h.load('lib/safful-protection.js'), s = h.socket()
+  protection.installSocketRawCapture(s)
+  const raw = { key: { id: 'restart-key-flag', remoteJid: '900003@lid', isViewOnce: true },
+    message: { imageMessage: { directPath: '/valid', mediaKey: Buffer.alloc(32) } } }
+  s.ev.emit('messages.upsert', { messages: [raw] })
+  const initial = await protection.readCapturedViewOnce(raw.key.remoteJid, raw.key.id)
+  assert.equal(initial.bytes.toString(), 'media bytes')
+  const restarted = setup(t, h.temp).load('lib/safful-protection.js')
+  restarted.installEarlyCaptureHook()
+  const restored = await restarted.readCapturedViewOnce(raw.key.remoteJid, raw.key.id)
+  assert.equal(restored?.bytes?.toString(), 'media bytes')
 })
 
 test('E2E: antiviewonce command enforces permissions, contact rules and DM delivery', async t => {

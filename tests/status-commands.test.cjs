@@ -32,11 +32,9 @@ function setup(t, previous) {
         return (async function* () { yield Buffer.alloc(state.bytes, 65) })()
       } }
       if (name.endsWith('safful-identities')) return {
+        ...require('../lib/safful-identities'),
         ownerJids: () => [sudo, '233240000002@s.whatsapp.net'],
         isOperator: async m => Boolean(m.fromMe),
-        normalizedJid: jid => String(jid || '').replace(/:\d+@/, '@'),
-        knownContacts: () => new Map([['900003@lid', { name: 'Ama Mensah' }]]),
-        attachContactCache() {}
       }
       if (name.startsWith('.')) return load(path.relative(root, realRequire.resolve(name)))
       return realRequire(name)
@@ -45,7 +43,7 @@ function setup(t, previous) {
       module, exports: module.exports, require: requireMock, Buffer, structuredClone,
       __filename: filename, __dirname: path.join(dir, 'lib'),
       process: { env: {}, stderr: { write() {} } }, global: {}, console,
-      setInterval: () => ({ unref() {} }), setImmediate
+      setInterval: () => ({ unref() {} }), setImmediate, setTimeout, clearTimeout
     }, { filename })
     modules.set(filename, module.exports)
     return module.exports
@@ -55,6 +53,7 @@ function setup(t, previous) {
     sendMessage: async (jid, payload) => { if (state.sendFail) throw Error('offline'); sent.push({ jid, payload }) } }
   const engine = load('lib/safful-status-save.js')
   engine.attach(socket)
+  socket.ev.emit('contacts.upsert', [{ id: '900003@lid', name: 'Ama Mensah', notify: 'Profile name' }])
   load('plugins/savestatus.js')
   const message = { fromMe: true, bot: socket, chat: '900003@lid', reply: async text => replies.push(text) }
   const run = (name, text, fromMe = true) => registry.find(c => c.pattern === name).fn({ ...message, fromMe }, text, { Void: socket })
@@ -108,6 +107,69 @@ test('E2E: savedelstat captures before deletion, survives restart, and deduplica
   assert.equal(restarted.sent.length, 1)
 })
 
+test('deleted statuses use saved names across PN/LID aliases and recheck renames at deletion', async t => {
+  const h = setup(t), pn = '233240000010@s.whatsapp.net', lid = '900010@lid'
+  assert.ok(h.registry.find(c => c.pattern === 'savedelstat').alias.includes('savedelstatus'))
+  await h.run('savedelstat', 'on')
+  const raw = status('saved-name')
+  raw.key.participant = lid
+  raw.key.participantAlt = pn
+  raw.pushName = 'Public profile'
+  h.socket.ev.emit('contacts.upsert', [{ id: lid, notify: 'Public profile', verifiedName: 'Business name' }])
+  h.socket.store = { contacts: new Map([[pn, { name: 'My saved friend' }]]) }
+  h.socket.getName = async () => { throw Error('Do not use ambiguous profile-name fallback') }
+  await h.receive(raw)
+  const cache = path.join(h.dir, '.safful-data', 'deleted-status')
+  const record = JSON.parse(fs.readFileSync(path.join(cache, fs.readdirSync(cache).find(f => f.endsWith('.json')))))
+  assert.equal(record.name, 'My saved friend')
+  assert.equal(record.savedName, true)
+  h.socket.store.contacts.set(pn, { name: 'Renamed friend' })
+  await h.revoke(raw.key)
+  assert.match(h.sent[0].payload.caption, /Deleted status from Renamed friend/)
+  assert.doesNotMatch(h.sent[0].payload.caption, /Public profile|Business name/)
+})
+
+test('status saved names resolve through stored identity mappings in either direction', async t => {
+  const h = setup(t), pn = '233240000010@s.whatsapp.net', lid = '900010@lid'
+  await h.run('savestatus', 'on')
+  h.socket.signalRepository = { lidMapping: {
+    getPNForLID: async id => id === lid ? pn : '',
+    getLIDForPN: async id => id === pn ? lid : '',
+  } }
+  for (const [i, sender, stored] of [[0, lid, pn], [1, pn, lid]]) {
+    h.socket.contacts = { [stored]: { name: 'Saved ' + i, notify: 'Profile' } }
+    const raw = status('mapped-' + i)
+    raw.key.participant = sender
+    raw.pushName = 'Profile'
+    await h.receive(raw)
+    assert.match(h.sent[i].payload.caption, new RegExp('Status from Saved ' + i))
+  }
+})
+
+test('old deleted-status cache never reuses a profile name and late contact sync supplies the saved name', async t => {
+  const h = setup(t), pn = '233240000010@s.whatsapp.net'
+  await h.run('savedelstat', 'on')
+  const raw = status('old-cache')
+  raw.key.participant = pn
+  raw.pushName = 'Public profile'
+  await h.receive(raw)
+  const dir = path.join(h.dir, '.safful-data', 'deleted-status')
+  const file = path.join(dir, fs.readdirSync(dir).find(f => f.endsWith('.json')))
+  const record = JSON.parse(fs.readFileSync(file))
+  record.name = 'Old cached profile'
+  delete record.savedName
+  fs.writeFileSync(file, JSON.stringify(record))
+  const restarted = setup(t, h.dir)
+  await restarted.revoke(raw.key)
+  assert.match(restarted.sent[0].payload.caption, /Deleted status from 233240000010/)
+  assert.doesNotMatch(restarted.sent[0].payload.caption, /profile/i)
+  raw.key.id = 'late-sync'
+  await restarted.receive(raw)
+  restarted.socket.ev.emit('contacts.upsert', [{ id: pn, name: 'Late synced name', notify: 'Profile' }])
+  await restarted.revoke(raw.key)
+  assert.match(restarted.sent[1].payload.caption, /Deleted status from Late synced name/)
+})
+
 test('savedelstat obeys 64 MB cap, ignores oversized status, and off clears files', async t => {
   const h = setup(t)
   await h.run('savedelstat', 'on')
@@ -149,7 +211,7 @@ test('E2E: kk handles raw and stored view-once quotes, PN/LID keys and expired U
   for (const type of ['imageMessage', 'videoMessage', 'audioMessage', 'ptvMessage']) {
     const key = { remoteJid: '900003@lid', id: type, isViewOnce: true }
     const original = { key, message: { viewOnceMessageV2Extension: { message: { [type]: {
-      directPath: '/expired', ptt: true, caption: 'view once'
+      directPath: '/expired', mediaKey: Buffer.alloc(32), ptt: true, caption: 'view once'
     } } } } }
     h.socket.updateMediaMessage = async raw => {
       assert.equal(raw.key.id, type)
@@ -166,11 +228,14 @@ test('E2E: kk handles raw and stored view-once quotes, PN/LID keys and expired U
   assert.equal(h.sent[2].payload.ptt, true)
   assert.ok(h.sent[3].payload.video)
   await kk.unwrap({ ...h.message, message: { extendedTextMessage: { contextInfo: {
-    stanzaId: 'raw', quotedMessage: { viewOnceMessage: { message: { imageMessage: { directPath: '/valid' } } } }
+    stanzaId: 'raw', quotedMessage: { viewOnceMessage: { message: { imageMessage: { directPath: '/valid', mediaKey: Buffer.alloc(32) } } } }
   } } } }, '')
   assert.equal(h.sent.length, 5)
   await kk.unwrap({ ...h.message, quoted: { message: { imageMessage: { directPath: '/normal' } } } }, '')
-  assert.equal(h.sent.length, 5)
+  assert.equal(h.sent.length, 6)
+  assert.equal(h.sent[5].jid, sudo)
+  assert.ok(h.sent[5].payload.text)
+  assert.equal(h.replies.length, 0, 'kk never posts errors in the originating chat')
 })
 
 test('kk replaces duplicate legacy registrations and preserves its existing aliases', async t => {
@@ -258,6 +323,7 @@ test('E2E: pinned Baileys decodes status envelopes, forwards named media and rec
   socket.sendMessage = h.socket.sendMessage
   require('../lib/safful-reconnect-watchdog').watch(socket)
   h.engine.attach(socket)
+  socket.ev.emit('contacts.upsert', [{ id: '900003@lid', name: 'Ama Mensah', notify: 'Profile name' }])
   await h.run('savestatus', 'on')
   await h.run('savedelstat', 'on')
   async function packet(id, message) {

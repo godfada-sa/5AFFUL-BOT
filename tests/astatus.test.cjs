@@ -71,11 +71,11 @@ test('text is supported but caption-only and failed downloads never become text 
   assert.equal(h.sent[0].payload.text, 'true text status')
   h.context.quotedMessage = { extendedTextMessage: { text: 'caption only' } }
   await h.plugin.autoReply(h.message, 'send')
-  assert.match(h.replies.at(-1), /only a caption/)
+  assert.match(h.replies.at(-1), /Status media unavailable/)
   h.state.fail = true
   h.context.quotedMessage = { imageMessage: { directPath: '/valid', caption: 'caption' } }
   await h.plugin.autoReply(h.message, 'send')
-  assert.match(h.replies.at(-1), /Could not retrieve/)
+  assert.match(h.replies.at(-1), /Could not send this status/)
   assert.equal(h.sent.length, 1)
 })
 
@@ -112,5 +112,5 @@ test('ignores groups, own messages, ordinary quotes and non-trigger text; off pe
   h.state.writeFail = true
   await h.plugin.configure(h.message, 'on')
   assert.equal(h.plugin.getEnabled(), false)
-  assert.match(h.replies.at(-1), /not changed/)
+  assert.match(h.replies.at(-1), /Could not save settings/)
 })

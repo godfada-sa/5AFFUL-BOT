@@ -22,28 +22,27 @@ cmd({
   filename: __filename,
 }, async (message, text, extra) => {
   autoview.attach(extra?.Void || message?.bot || global.__saffulLatestSocket)
-  if (!await isOwner(message, extra)) return message.reply('❌ This command is for the bot owner only.')
+  if (!await isOwner(message, extra)) return message.reply('Owner only.')
 
   const input = String(text || '').trim().toLowerCase()
   if (!input || input === 'status') {
     const mode = autoview.getMode()
     const state = mode === 'off'
-      ? '*OFF* — statuses are not marked seen.'
+      ? 'OFF'
       : mode === 'instant'
-        ? '*INSTANT* — every status is marked seen immediately.'
-        : `*DELAYED* — statuses are marked seen after *${mode} minute(s)*.`
-    return message.reply('👁 *Auto-view*\nMode: ' + state +
-      '\n\n`.autoview on` — view immediately\n`.autoview <1-10>` — delay in minutes\n`.autoview off` — stop viewing')
+        ? 'ON'
+        : `${mode}-minute delay`
+    return message.reply('Auto-view: ' + state + '.')
   }
 
-  if (!autoview.normalizeMode(input)) return message.reply('Usage: `.autoview on`, `.autoview <1-10>`, or `.autoview off`. `0` is no longer supported.')
+  if (!autoview.normalizeMode(input)) return message.reply(input === '0' ? '0 is no longer supported. Use on, off or 1–10.' : 'Use .autoview on, off or 1–10.')
   try {
     const mode = autoview.setMode(input)
-    if (mode === 'off') return message.reply('👁 Auto-view is now *OFF*. Pending statuses were cleared and nothing will be marked seen.')
-    if (mode === 'instant') return message.reply('👁 Auto-view is now *INSTANT*. Every status is marked seen as it arrives.')
-    return message.reply(`👁 Auto-view is now *DELAYED*. Statuses are marked seen after *${mode} minute(s)*.`)
+    if (mode === 'off') return message.reply('Auto-view: OFF.')
+    if (mode === 'instant') return message.reply('Auto-view: ON.')
+    return message.reply(`Auto-view: ${mode}-minute delay.`)
   } catch (error) {
-    return message.reply('Could not save auto-view mode: ' + error.message)
+    return message.reply('Could not save settings. Try again.')
   }
 })
 
