@@ -28,6 +28,10 @@ function harness() {
       } }
       if (name === '../lib/safful-identities') return { ownerJids: () => [sudo] }
       if (name === '../lib/safful-protection') return { readCapturedViewOnce: async () => state.cache || null }
+      if (name === '../lib/safful-kk-capture') return {
+        read: async () => state.captured || null,
+        status: () => ({ enabled: true, entries: 1, captured: 1, bytes: plaintext.length, pending: 0 }),
+      }
       return native(name)
     },
   }, { filename })
@@ -303,4 +307,46 @@ test('kk downloads media that carries only a full https CDN url', async t => {
   assert.equal(urls.length, 1)
   assert.match(urls[0], /\/v\/t62\/abc/)
   assert.deepEqual(h.sent[0].payload.image, plaintext)
+})
+
+test('kk sends bytes captured at arrival without fetching or asking the phone', async t => {
+  const h = harness()
+  t.mock.method(global, 'fetch', async () => { throw Error('network must not be used') })
+  h.state.captured = {
+    entry: { type: 'imageMessage', kind: 'image', media: { mimetype: 'image/jpeg', caption: 'captured' } },
+    raw: null, reason: '', bytes: plaintext,
+  }
+  // The reply quote is exactly what WhatsApp now sends: no key, no directPath.
+  h.message.quoted = { key: h.key, message: { conversation: 'stripped' } }
+  h.socket.requestPlaceholderResend = async () => { throw Error('phone must not be asked') }
+  await h.unwrap(h.message, '')
+  assert.equal(h.sent[0].to, sudo)
+  assert.deepEqual(h.sent[0].payload.image, plaintext)
+  assert.equal(h.sent[0].payload.caption, 'captured')
+  assert.equal(h.replies.length, 0)
+})
+
+test('kk explains an unavailable fanout instead of blaming the key', async () => {
+  const h = harness()
+  h.state.captured = {
+    entry: { type: '', kind: '', media: {} }, raw: null,
+    reason: 'unavailable:view_once_unavailable_fanout', bytes: null,
+  }
+  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
+    imageMessage: { viewOnce: true },
+  } } } }
+  h.socket.ev = { on: () => {}, off: () => {} }
+  h.socket.requestPlaceholderResend = async () => 'request-id'
+  await h.unwrap(h.message, '')
+  assert.equal(h.sent[0].to, sudo)
+  assert.match(h.sent[0].payload.text, /never received the view-once media/)
+  assert.equal(h.replies.length, 0)
+})
+
+test('kk status reports the capture state privately', async () => {
+  const h = harness()
+  await h.unwrap(h.message, 'status')
+  assert.equal(h.sent[0].to, sudo)
+  assert.match(h.sent[0].payload.text, /Capture ON/)
+  assert.match(h.sent[0].payload.text, /decrypted 1/)
 })
