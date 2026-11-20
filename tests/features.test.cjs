@@ -304,3 +304,32 @@ test('late payload replaces unavailable retry entry and survives a concurrent re
   h.state.fail=false; avo.runRetryCycle(); avo.runRetryCycle(); await settle()
   assert.equal(s.sent.length,1); assert.equal(avo.stats.recovered,1); assert.equal(avo.retryQueue.size,0)
 })
+
+test('antiviewonce asks the phone to resend a view-once stub and captures the answer', async t => {
+  const h=setup(t), avo=h.load('plugins/antiviewonce.js'), s=h.socket()
+  avo.saveSettings({global:true,contacts:[]}); avo.attach(s)
+  let requested
+  s.requestPlaceholderResend = async messageKey => {
+    requested = messageKey
+    setTimeout(() => s.ev.emit('messages.upsert', { type: 'notify', messages: [media('stubbed')] }), 5)
+    return 'request-id'
+  }
+  s.ws.emit('CB:message',{attrs:{id:'stubbed',from:'900003@lid'},content:[{tag:'unavailable',attrs:{type:'view_once_unavailable_fanout'}}]})
+  await until(() => s.sent.length === 1)
+  assert.equal(requested.id, 'stubbed')
+  assert.equal(requested.remoteJid, '900003@lid')
+  assert.equal(s.sent[0][0], '233240000001@s.whatsapp.net')
+  assert.equal(s.sent[0][1].image.toString(), 'media bytes')
+  assert.equal(avo.stats.sent, 1)
+})
+
+test('antiviewonce resend attempts are capped per message', async t => {
+  const h=setup(t), avo=h.load('plugins/antiviewonce.js'), s=h.socket()
+  avo.saveSettings({global:true,contacts:[]}); avo.attach(s)
+  let requests = 0
+  s.requestPlaceholderResend = async () => { requests += 1; return 'request-id' }
+  const stub = { key: { id: 'capped', remoteJid: '900003@lid', isViewOnce: true } }
+  for (let i = 0; i < 5; i += 1) avo.requestResend(stub)
+  await settle()
+  assert.equal(requests, 3, 'never spams the phone')
+})

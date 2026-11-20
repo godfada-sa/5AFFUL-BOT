@@ -175,3 +175,70 @@ test('delivery errors stay private and are distinguished from retrieval failures
   assert.equal(h.replies.length, 0)
   assert.equal(h.logs.length, 1)
 })
+
+test('kk asks the phone to resend the original when the quote has its media fields stripped', async t => {
+  const h = harness(), bytes = await encrypted()
+  t.mock.method(global, 'fetch', async () => new Response(bytes))
+  // WhatsApp now strips mediaKey/directPath from a quoted view-once message.
+  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
+    imageMessage: { viewOnce: true, caption: 'hello' },
+  } } } }
+  const listeners = new Set()
+  h.socket.ev = {
+    on: (name, fn) => { if (name === 'messages.upsert') listeners.add(fn) },
+    off: (name, fn) => { if (name === 'messages.upsert') listeners.delete(fn) },
+  }
+  let requests = 0
+  h.socket.requestPlaceholderResend = async messageKey => {
+    requests += 1
+    assert.equal(messageKey.id, h.key.id, 'resends the replied message id')
+    assert.equal(messageKey.remoteJid, h.key.remoteJid)
+    setTimeout(() => {
+      for (const listener of listeners) listener({ messages: [h.original()] })
+    }, 10)
+    return 'request-id'
+  }
+  await h.unwrap(h.message, '')
+  assert.equal(requests, 1, 'requests the original from the primary phone')
+  assert.equal(listeners.size, 0, 'removes its temporary upsert listener')
+  assert.equal(h.sent[0].to, sudo)
+  assert.deepEqual(h.sent[0].payload.image, plaintext)
+  assert.equal(h.replies.length, 0)
+})
+
+test('kk falls back to a raw PDO request when the socket exposes no resend helper', async t => {
+  const h = harness(), bytes = await encrypted()
+  t.mock.method(global, 'fetch', async () => new Response(bytes))
+  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
+    imageMessage: { viewOnce: true },
+  } } } }
+  const listeners = new Set()
+  h.socket.ev = {
+    on: (name, fn) => { if (name === 'messages.upsert') listeners.add(fn) },
+    off: (name, fn) => { if (name === 'messages.upsert') listeners.delete(fn) },
+  }
+  let request
+  h.socket.sendPeerDataOperationMessage = async pdo => {
+    request = pdo
+    setTimeout(() => {
+      for (const listener of listeners) listener({ messages: [h.original()] })
+    }, 10)
+    return 'request-id'
+  }
+  await h.unwrap(h.message, '')
+  assert.equal(request.peerDataOperationRequestType, 4)
+  assert.equal(request.placeholderMessageResendRequest[0].messageKey.id, h.key.id)
+  assert.deepEqual(h.sent[0].payload.image, plaintext)
+})
+
+test('kk downloads media that carries only a full https CDN url', async t => {
+  const h = harness(), bytes = await encrypted(), urls = []
+  t.mock.method(global, 'fetch', async url => { urls.push(String(url)); return new Response(bytes) })
+  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
+    imageMessage: { viewOnce: true, mediaKey, url: 'https://mmg.whatsapp.net/v/t62/abc?x=1' },
+  } } } }
+  await h.unwrap(h.message, '')
+  assert.equal(urls.length, 1)
+  assert.match(urls[0], /\/v\/t62\/abc/)
+  assert.deepEqual(h.sent[0].payload.image, plaintext)
+})

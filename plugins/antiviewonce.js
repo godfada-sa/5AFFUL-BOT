@@ -7,6 +7,7 @@ const { cmd, commands } = require('../lib/plugins')
 const { resolvePhone, ownerJids, senderIds, isOperator } = require('../lib/safful-identities')
 const viewOnceDetector = require('../lib/safful-viewonce-detector')
 const { detectViewOnce } = viewOnceDetector
+const { normalizeMedia, sendResendRequest } = require('../lib/safful-kk-media')
 
 const VIEW_ONCE_WRAPPERS = [
   'viewOnceMessage',
@@ -19,6 +20,7 @@ const MEDIA_TYPES = new Set(['imageMessage', 'videoMessage', 'audioMessage', 'pt
 const SETTINGS_FILE = process.env.SAFFUL_ANTIVIEWONCE_FILE || path.join(__dirname, '..', '.safful-data', 'antiviewonce.json')
 const stats = { detected: 0, sent: 0, recovered: 0, failed: 0, unavailable: 0, lastError: '' }
 const processed = new Set(), pending = new Set(), unavailableIds = new Set()
+const resendTries = new Map()
 
 // Late-arrival retry: WhatsApp sometimes delivers the media for a view-once
 // message minutes after the initial "unavailable" notice (reconnect history
@@ -110,18 +112,32 @@ async function streamToBuffer(stream) {
 
 async function downloadViewOnce(socket, message, unwrapped) {
   const mediaType = unwrapped.type === 'ptvMessage' ? 'video' : unwrapped.type.replace('Message', '')
-  const download = async media => streamToBuffer(await downloadContentFromMessage(media, mediaType, { options: { timeout: 30000 } }))
-  try { return await download(unwrapped.media) } catch (error) {
+  const media = normalizeMedia(unwrapped.media)
+  const download = async target => streamToBuffer(await downloadContentFromMessage(target, mediaType, { options: { timeout: 30000 } }))
+  try { return await download(media) } catch (error) {
     const status = error.status || error.response?.status || error.output?.statusCode
-    if (![404, 410].includes(status) || typeof socket.updateMediaMessage !== 'function') throw error
+    if (![400, 403, 404, 410].includes(status) || typeof socket.updateMediaMessage !== 'function') throw error
     // Preserve the key and media for Baileys' supported re-upload request.
-    const normalized = { ...message, message: { [unwrapped.type]: { ...unwrapped.media } } }
+    const normalized = { ...message, message: { [unwrapped.type]: { ...media } } }
     const updated = await socket.updateMediaMessage(normalized)
     // Recent clients may return the refreshed media inside a view-once or
     // ephemeral wrapper rather than at message.<type>.
     const refreshed = detectViewOnce(updated) || unwrapViewOnce(updated?.message || updated, true)
-    return download(refreshed?.media || updated?.message?.[unwrapped.type] || normalized.message[unwrapped.type])
+    return download(normalizeMedia(refreshed?.media || updated?.message?.[unwrapped.type] || normalized.message[unwrapped.type]))
   }
+}
+
+// New WhatsApp builds deliver only an unavailable stub to linked devices, so
+// the media never arrives on its own. Ask the primary phone to resend it; the
+// answer comes back as a normal upsert and the capture above handles it.
+function requestResend(message) {
+  const id = message?.key?.remoteJid + ':' + message?.key?.id
+  if (!message?.key?.id || !activeSocket) return
+  const tries = resendTries.get(id) || 0
+  if (tries >= 3) return
+  resendTries.set(id, tries + 1)
+  if (resendTries.size > 500) resendTries.delete(resendTries.keys().next().value)
+  void sendResendRequest(activeSocket, message.key).catch(() => {})
 }
 
 function forwardedContent(unwrapped, buffer) {
@@ -150,8 +166,9 @@ function queueUnavailable(raw) {
 async function attemptQueued(entry) {
   const raw = entry.raw
   const detected = detectViewOnce(raw)
-  // Still no media payload delivered — keep waiting inside the window.
-  if (!detected) return false
+  // Still no media payload delivered — ask the phone for it and keep waiting
+  // inside the retry window.
+  if (!detected) { requestResend(raw); return false }
   const id = raw.key.remoteJid + ':' + raw.key.id
   // Captured by the live path in the meantime — nothing left to do.
   if (processed.has(id)) return true
@@ -233,6 +250,7 @@ function attach(socket) {
       if (!enabled) return
       stats.unavailable++
       queueUnavailable(message)
+      requestResend(message)
     }).catch(() => {})
   })
 }
@@ -293,6 +311,7 @@ module.exports = {
   retryQueue,
   attemptQueued,
   runRetryCycle,
+  requestResend,
   RETRY_WINDOW_MS,
   forwardedContent,
   saveSettings,
