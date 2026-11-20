@@ -1,8 +1,5 @@
 'use strict'
 
-// Keep the resend windows short so the phone-silence cases stay fast.
-process.env.SAFFUL_KK_RESEND_MS = '1000'
-
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
@@ -35,16 +32,21 @@ function harness() {
       return native(name)
     },
   }, { filename })
+  const relayed = []
   const socket = { sendMessage: async (to, payload) => {
     if (state.failAll || (state.failMedia && !payload.text)) throw Object.assign(Error('private transport failed'), { status: 500 })
     sent.push({ to, payload })
+  }, relayMessage: async (to, content, options) => {
+    if (state.failRelay) throw Object.assign(Error('relay failed'), { status: 500 })
+    relayed.push({ to, content, options })
+    return 'relay-id'
   } }
   const key = { id: 'original', remoteJid: 'team@g.us', participant: '900003@lid' }
   const original = (media = {}) => ({ key, message: { viewOnceMessageV2: { message: {
     imageMessage: { viewOnce: true, directPath: '/valid', mediaKey, ...media },
   } } } })
   const message = { chat: key.remoteJid, bot: socket, quoted: original(), reply: async text => replies.push(text) }
-  return { ...module.exports, sent, replies, logs, state, socket, key, original, message }
+  return { ...module.exports, sent, relayed, replies, logs, state, socket, key, original, message }
 }
 async function encrypted(kind = 'image') {
   const { cipherKey, iv, macKey } = await baileys.getMediaKeys(mediaKey, kind)
@@ -54,20 +56,53 @@ async function encrypted(kind = 'image') {
   return Buffer.concat([ciphertext, mac])
 }
 
-test('E2E: kk decrypts a real encrypted download with a serialized media key and only sends to sudo', async t => {
-  const h = harness(), bytes = await encrypted(), urls = []
-  t.mock.method(global, 'fetch', async url => { urls.push(url); return new Response(bytes) })
+test('E2E: kk relays the stored original with viewOnce cleared instead of downloading it', async t => {
+  const h = harness()
+  t.mock.method(global, 'fetch', async () => { throw Error('relaying must not download') })
   h.message.quoted = h.original({ mediaKey: { type: 'Buffer', data: mediaKey.toString('base64') } })
   await h.unwrap(h.message, '')
-  assert.equal(urls.length, 1)
-  assert.equal(h.sent[0].to, sudo)
-  assert.deepEqual(h.sent[0].payload.image, plaintext)
-  assert.equal(h.sent[0].payload.viewOnce, undefined)
+  assert.equal(h.relayed.length, 1)
+  assert.equal(h.relayed[0].to, sudo)
+  const image = h.relayed[0].content.imageMessage
+  assert.equal(image.viewOnce, undefined, 'the relayed copy must not be view-once again')
+  assert.ok(Buffer.isBuffer(image.mediaKey) && image.mediaKey.length === 32, 'keeps the original key for the recipient')
+  assert.equal(image.directPath, '/valid')
+  assert.equal(h.sent.length, 0, 'nothing is sent through the media path')
   assert.equal(h.replies.length, 0)
+})
+
+test('kk never asks the phone to resend a view-once stub', async t => {
+  const h = harness()
+  t.mock.method(global, 'fetch', async () => { throw Error('must not fetch without keys') })
+  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
+    imageMessage: { viewOnce: true, caption: 'hello' },
+  } } } }
+  let asked = 0
+  h.socket.requestPlaceholderResend = async () => { asked += 1; return 'request-id' }
+  h.socket.sendPeerDataOperationMessage = async () => { asked += 1; return 'request-id' }
+  await h.unwrap(h.message, '')
+  assert.equal(asked, 0, 'a view-once stub is unrecoverable from the phone, so it is not requested')
+  assert.match(h.sent[0].payload.text, /Original media unavailable/)
+  assert.equal(h.sent[0].to, sudo)
+  assert.equal(h.replies.length, 0)
+})
+
+test('kk uses media captured at arrival when the relay cannot run', async t => {
+  const h = harness()
+  t.mock.method(global, 'fetch', async () => { throw Error('network must not be used') })
+  h.state.failRelay = true
+  h.state.captured = {
+    entry: { type: 'imageMessage', kind: 'image', media: { mimetype: 'image/jpeg' } },
+    raw: null, reason: '', bytes: plaintext,
+  }
+  await h.unwrap(h.message, '')
+  assert.deepEqual(h.sent[0].payload.image, plaintext)
+  assert.equal(h.sent[0].to, sudo)
 })
 
 test('kk recovers cached bytes when quotes are stripped, without fetching or growing a new disk cache', async t => {
   const h = harness()
+  h.socket.relayMessage = undefined // the cached copy is all that is left
   t.mock.method(global, 'fetch', async () => { throw Error('network must not be used') })
   h.state.cache = { raw: h.original(), bytes: plaintext }
   h.message.quoted = { key: h.key, message: { conversation: 'stripped' } }
@@ -78,6 +113,7 @@ test('kk recovers cached bytes when quotes are stripped, without fetching or gro
 
 test('kk tries a usable original when another candidate fails and the first store lookup returns nothing', async t => {
   const h = harness(), bytes = await encrypted(), urls = []
+  h.socket.relayMessage = undefined // exercises the decrypt fallback
   t.mock.method(global, 'fetch', async url => {
     urls.push(url)
     return String(url).endsWith('/old') ? new Response('', { status: 410 }) : new Response(bytes)
@@ -94,6 +130,7 @@ test('kk tries a usable original when another candidate fails and the first stor
 
 test('kk refreshes HTTP 403 with the original group key and normalized media', async t => {
   const h = harness(), bytes = await encrypted()
+  h.socket.relayMessage = undefined // exercises the decrypt fallback
   t.mock.method(global, 'fetch', async url => String(url).endsWith('/fresh') ? new Response(bytes) : new Response('', { status: 403 }))
   let refreshed = 0
   h.socket.updateMediaMessage = async raw => {
@@ -110,6 +147,7 @@ test('kk refreshes HTTP 403 with the original group key and normalized media', a
 
 test('duplicate expired quotes do not exhaust the recovery limit before a usable original', async t => {
   const h = harness(), bytes = await encrypted(), urls = []
+  h.socket.relayMessage = undefined // exercises the decrypt fallback
   t.mock.method(global, 'fetch', async url => {
     urls.push(url)
     return String(url).endsWith('/old') ? new Response('', { status: 410 }) : new Response(bytes)
@@ -143,6 +181,7 @@ test('kk handles mtype/msg quotes and requests a missing URL using its original 
 
 test('kk refreshes and decrypts a video note through the supported video media assertion', async t => {
   const h = harness(), bytes = await encrypted('video')
+  h.socket.relayMessage = undefined // exercises the decrypt fallback
   t.mock.method(global, 'fetch', async url => String(url).endsWith('/fresh') ? new Response(bytes) : new Response('', { status: 410 }))
   h.message.quoted = { key: { ...h.key, isViewOnce: true }, message: {
     ptvMessage: { directPath: '/expired', mediaKey: { type: 'Buffer', data: [...mediaKey] } },
@@ -172,6 +211,7 @@ test('kk explains missing keys privately without attempting impossible downloads
 
 test('delivery errors stay private and are distinguished from retrieval failures', async t => {
   const h = harness()
+  h.socket.relayMessage = undefined // the cached copy is all that is left
   h.state.cache = { raw: h.original(), bytes: plaintext }
   h.state.failMedia = true
   await h.unwrap(h.message, '')
@@ -183,122 +223,9 @@ test('delivery errors stay private and are distinguished from retrieval failures
   assert.equal(h.logs.length, 1)
 })
 
-test('kk asks the phone to resend the original when the quote has its media fields stripped', async t => {
-  const h = harness(), bytes = await encrypted()
-  t.mock.method(global, 'fetch', async () => new Response(bytes))
-  // WhatsApp now strips mediaKey/directPath from a quoted view-once message.
-  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
-    imageMessage: { viewOnce: true, caption: 'hello' },
-  } } } }
-  const listeners = new Set()
-  h.socket.ev = {
-    on: (name, fn) => { if (name === 'messages.upsert') listeners.add(fn) },
-    off: (name, fn) => { if (name === 'messages.upsert') listeners.delete(fn) },
-  }
-  let requests = 0
-  h.socket.requestPlaceholderResend = async messageKey => {
-    requests += 1
-    assert.equal(messageKey.id, h.key.id, 'resends the replied message id')
-    assert.equal(messageKey.remoteJid, h.key.remoteJid)
-    setTimeout(() => {
-      for (const listener of listeners) listener({ messages: [h.original()] })
-    }, 10)
-    return 'request-id'
-  }
-  await h.unwrap(h.message, '')
-  assert.equal(requests, 1, 'requests the original from the primary phone')
-  assert.equal(listeners.size, 0, 'removes its temporary upsert listener')
-  assert.equal(h.sent[0].to, sudo)
-  assert.deepEqual(h.sent[0].payload.image, plaintext)
-  assert.equal(h.replies.length, 0)
-})
-
-test('kk falls back to a raw PDO request when the socket exposes no resend helper', async t => {
-  const h = harness(), bytes = await encrypted()
-  t.mock.method(global, 'fetch', async () => new Response(bytes))
-  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
-    imageMessage: { viewOnce: true },
-  } } } }
-  const listeners = new Set()
-  h.socket.ev = {
-    on: (name, fn) => { if (name === 'messages.upsert') listeners.add(fn) },
-    off: (name, fn) => { if (name === 'messages.upsert') listeners.delete(fn) },
-  }
-  let request
-  h.socket.sendPeerDataOperationMessage = async pdo => {
-    request = pdo
-    setTimeout(() => {
-      for (const listener of listeners) listener({ messages: [h.original()] })
-    }, 10)
-    return 'request-id'
-  }
-  await h.unwrap(h.message, '')
-  assert.equal(request.peerDataOperationRequestType, 4)
-  assert.equal(request.placeholderMessageResendRequest[0].messageKey.id, h.key.id)
-  assert.deepEqual(h.sent[0].payload.image, plaintext)
-})
-
-test('kk reports a phoneless answer honestly instead of a generic missing key', async t => {
-  const h = harness()
-  t.mock.method(global, 'fetch', async () => { throw Error('must not fetch without keys') })
-  const stripped = { key: h.key, message: { viewOnceMessageV2: { message: {
-    imageMessage: { viewOnce: true, caption: 'hello' },
-  } } } }
-  h.message.quoted = stripped
-  const listeners = new Set()
-  h.socket.ev = {
-    on: (name, fn) => { if (name === 'messages.upsert') listeners.add(fn) },
-    off: (name, fn) => { if (name === 'messages.upsert') listeners.delete(fn) },
-  }
-  h.socket.requestPlaceholderResend = async () => {
-    setTimeout(() => { for (const listener of listeners) listener({ messages: [stripped] }) }, 10)
-    return 'request-id'
-  }
-  await h.unwrap(h.message, '')
-  assert.equal(h.sent[0].to, sudo)
-  assert.match(h.sent[0].payload.text, /without a media key/)
-  assert.equal(h.replies.length, 0)
-  assert.equal(listeners.size, 0)
-})
-
-test('kk reports phone silence separately and asks twice before giving up', async t => {
-  const h = harness()
-  t.mock.method(global, 'fetch', async () => { throw Error('must not fetch without keys') })
-  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
-    imageMessage: { viewOnce: true },
-  } } } }
-  h.socket.ev = { on: () => {}, off: () => {} }
-  let calls = 0
-  h.socket.requestPlaceholderResend = async () => { calls += 1; return 'request-id' }
-  await h.unwrap(h.message, '')
-  assert.equal(calls, 2, 'asks the phone again before reporting silence')
-  assert.match(h.sent[0].payload.text, /did not answer the resend request/)
-  assert.equal(h.replies.length, 0)
-})
-
-test('kk clears a resend Baileys already queued so the request still reaches the phone', async t => {
-  const h = harness(), bytes = await encrypted()
-  t.mock.method(global, 'fetch', async () => new Response(bytes))
-  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
-    imageMessage: { viewOnce: true },
-  } } } }
-  const listeners = new Set(), deleted = []
-  h.socket.ev = {
-    on: (name, fn) => { if (name === 'messages.upsert') listeners.add(fn) },
-    off: (name, fn) => { if (name === 'messages.upsert') listeners.delete(fn) },
-  }
-  h.socket.placeholderResendCache = { del: async id => { deleted.push(id) } }
-  h.socket.requestPlaceholderResend = async () => {
-    setTimeout(() => { for (const listener of listeners) listener({ messages: [h.original()] }) }, 10)
-    return undefined
-  }
-  await h.unwrap(h.message, '')
-  assert.deepEqual(deleted, [h.key.id])
-  assert.deepEqual(h.sent[0].payload.image, plaintext)
-})
-
 test('kk downloads media that carries only a full https CDN url', async t => {
   const h = harness(), bytes = await encrypted(), urls = []
+  h.socket.relayMessage = undefined // exercises the decrypt fallback
   t.mock.method(global, 'fetch', async url => { urls.push(String(url)); return new Response(bytes) })
   h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
     imageMessage: { viewOnce: true, mediaKey, url: 'https://mmg.whatsapp.net/v/t62/abc?x=1' },

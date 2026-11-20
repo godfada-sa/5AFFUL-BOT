@@ -5,7 +5,7 @@ const { ownerJids } = require('../lib/safful-identities')
 const { detectViewOnce } = require('../lib/safful-viewonce-detector')
 const { rawQuotedPayload, quotedReference, mediaPayload } = require('../lib/safful-status-media')
 const capture = require('../lib/safful-kk-capture')
-const { asRaw, retrieve, statusCode, deadline, logLine, hasMediaKey, recentOriginal, requestOriginal } = require('../lib/safful-kk-media')
+const { asRaw, retrieve, relayStored, statusCode, deadline, logLine, hasMediaKey, recentOriginal } = require('../lib/safful-kk-media')
 const active = new Set()
 
 async function privateNotice(socket, destination, text) {
@@ -22,12 +22,11 @@ function diagnostic(error) {
     return 'This device never received the view-once media. WhatsApp sent only an unavailable notice, so there is nothing to decrypt locally. Ask the sender to resend it as a normal photo or video.'
   }
   if (error?.code === 'KK_MISSING_KEY') {
-    return 'Original media unavailable. The view-once arrived without its media key, which means it was opened before it could be captured or it was never sent to this device. Ask the sender to resend it normally.'
+    return 'Original media unavailable. This device never received the view-once payload, so there is nothing stored to relay. Turn on .antiviewonce in this chat before it is opened, or ask the sender to resend it normally.'
   }
   if (error?.code === 'KK_MISSING_URL') return 'Media link unavailable. Ask the sender to resend it.'
   if (error?.code === 'KK_TIMEOUT') return 'Media request timed out. Try again.'
-  if (error?.code === 'KK_RESENT_STUB') return 'Your phone answered the resend without a media key. WhatsApp deletes view-once media once it is opened, so there is nothing left to recover for this message.'
-  if (error?.code === 'KK_NO_ANSWER') return 'Your phone did not answer the resend request. Keep it online with WhatsApp open, then reply to the view-once with .kk again.'
+  if (error?.code === 'KK_NO_RELAY') return 'This connection cannot relay the stored original. Ask the sender to resend it normally.'
   if (error?.code === 'ERR_OSSL_BAD_DECRYPT') return 'Media decryption failed. Ask the sender to resend it.'
   const status = statusCode(error)
   if ([403, 404, 410].includes(status)) return 'Media unavailable (HTTP ' + status + '). Ask the sender to resend it.'
@@ -71,10 +70,14 @@ async function attempt(socket, items) {
   }
   return { recovered, lastError }
 }
-function worthResending(items, lastError) {
-  if (!items.length || !items.some(item => hasMediaKey(item.detected.media))) return true
-  if ([403, 404, 410].includes(statusCode(lastError))) return true
-  return ['KK_MISSING_KEY', 'KK_MISSING_URL'].includes(lastError?.code)
+// Prefer the original that can be relayed without a local download: it needs a
+// media key and a CDN location, and a directPath beats a plain url.
+function relayCandidates(items) {
+  return items
+    .filter(item => hasMediaKey(item.detected.media))
+    .sort((a, b) => Number(Boolean(b.detected.media.directPath || b.detected.media.url)) -
+      Number(Boolean(a.detected.media.directPath || a.detected.media.url)))
+    .slice(0, 3)
 }
 
 async function unwrap(message, text, meta = {}) {
@@ -106,15 +109,11 @@ async function unwrap(message, text, meta = {}) {
     logLine('kk-start', requestId, 'capture=' + (captured
       ? (captured.bytes ? 'bytes(' + captured.bytes.length + ')' : 'raw:' + (captured.reason || 'no-bytes'))
       : 'none'))
-    if (captured?.bytes && captured.entry?.type) {
-      return await deliver(socket, destination, { bytes: captured.bytes, found: capturedMedia(captured.entry) })
-    }
     let cache
     try { cache = await require('../lib/safful-protection').readCapturedViewOnce(key.remoteJid, key.id) } catch {}
-    if (cache?.bytes) return await deliver(socket, destination, { bytes: cache.bytes, found: foundMedia(detectViewOnce(cache.raw)) })
     const candidates = [captured?.raw, cache?.raw, quoted?.fakeObj, quoted, rawQuotedPayload(message, meta)]
     // Baileys keeps recently decrypted content for retry receipts; use it
-    // before touching the store or asking the phone for a resend.
+    // before touching the store.
     const recent = recentOriginal(socket, key.remoteJid, key.id)
     if (recent) candidates.push(recent)
     for (const store of [...new Set([meta.store, socket.store].filter(Boolean))]) {
@@ -138,23 +137,28 @@ async function unwrap(message, text, meta = {}) {
     let found = foundFrom(rawCandidates, rawCandidates.some(raw => detectViewOnce(raw)))
     logLine('kk-candidates', rawCandidates.length, 'view-once', found.length,
       'with-key', found.filter(item => hasMediaKey(item.detected.media)).length)
-    let { recovered, lastError } = await attempt(socket, found)
-    if (!recovered && worthResending(found, lastError)) {
-      // Last resort: ask the primary phone for the original stanza. Newer
-      // clients often answer with the same stripped stub, so the capture path
-      // above is what normally makes .kk succeed.
-      logLine('kk-resend-request', key.id, 'reason=' + (lastError?.code || statusCode(lastError) || 'none'))
-      const resent = await requestOriginal(socket, key)
-      logLine('kk-resend-state', resent.state)
-      if (resent.state === 'resent' && resent.raw) {
-        found = foundFrom([asRaw(resent.raw, key)], true)
-        ;({ recovered, lastError } = await attempt(socket, found))
-      } else if (resent.state === 'stub') {
-        lastError = Object.assign(Error('Phone resent a stub'), { code: 'KK_RESENT_STUB' })
-      } else if (resent.state === 'no-answer') {
-        lastError = Object.assign(Error('Phone did not answer'), { code: 'KK_NO_ANSWER' })
+    // 1. Relay the stored original as an ordinary message. Nothing is
+    // downloaded and no media key is needed on this device: the recipient
+    // fetches the CDN ciphertext with the key that is already inside the stored
+    // stanza. This is the levanter .vv approach, and it is the only path that
+    // survives a quote whose media fields WhatsApp has stripped.
+    for (const candidate of relayCandidates(found)) {
+      try {
+        await relayStored(socket, destination, candidate.detected)
+        logLine('kk-relayed', requestId, candidate.detected.type)
+        return
+      } catch (error) {
+        logLine('kk-relay-failed', requestId, error?.code || statusCode(error) || error?.message)
       }
     }
+    // 2. Media captured when the view-once arrived. Once WhatsApp has taken the
+    // original away this cache is the only surviving copy.
+    if (captured?.bytes && captured.entry?.type) {
+      return await deliver(socket, destination, { bytes: captured.bytes, found: capturedMedia(captured.entry) })
+    }
+    if (cache?.bytes) return await deliver(socket, destination, { bytes: cache.bytes, found: foundMedia(detectViewOnce(cache.raw)) })
+    // 3. Last resort: decrypt the stored original in place.
+    let { recovered, lastError } = await attempt(socket, found)
     if (!recovered) {
       logLine('kk-failed', requestId, lastError?.code || statusCode(lastError) || lastError?.message)
       const unavailable = Boolean(captured && !captured.bytes && /^unavailable:/.test(captured.reason || ''))
