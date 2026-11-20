@@ -4,7 +4,7 @@ const { cmd, commands } = require('../lib/plugins')
 const { ownerJids } = require('../lib/safful-identities')
 const { detectViewOnce } = require('../lib/safful-viewonce-detector')
 const { rawQuotedPayload, quotedReference, mediaPayload } = require('../lib/safful-status-media')
-const { asRaw, retrieve, statusCode, deadline, hasMediaKey, recentOriginal, requestOriginal } = require('../lib/safful-kk-media')
+const { asRaw, retrieve, statusCode, deadline, debugLog, hasMediaKey, recentOriginal, requestOriginal } = require('../lib/safful-kk-media')
 const active = new Set()
 
 async function privateNotice(socket, destination, text) {
@@ -20,6 +20,8 @@ function diagnostic(error) {
   if (error?.code === 'KK_MISSING_KEY') return 'Original media unavailable. Ask the sender to resend it normally.'
   if (error?.code === 'KK_MISSING_URL') return 'Media link unavailable. Ask the sender to resend it.'
   if (error?.code === 'KK_TIMEOUT') return 'Media request timed out. Try again.'
+  if (error?.code === 'KK_RESENT_STUB') return 'Your phone answered the resend without a media key. WhatsApp deletes view-once media once it is opened, so there is nothing left to recover for this message.'
+  if (error?.code === 'KK_NO_ANSWER') return 'Your phone did not answer the resend request. Keep it online with WhatsApp open, then reply to the view-once with .kk again.'
   if (error?.code === 'ERR_OSSL_BAD_DECRYPT') return 'Media decryption failed. Ask the sender to resend it.'
   const status = statusCode(error)
   if ([403, 404, 410].includes(status)) return 'Media unavailable (HTTP ' + status + '). Ask the sender to resend it.'
@@ -108,15 +110,23 @@ async function unwrap(message, _text, meta = {}) {
     // A serializer can strip the wrapper from a stored original. Once this
     // exact reply is confirmed as view-once, that original remains usable.
     let found = foundFrom(rawCandidates, rawCandidates.some(raw => detectViewOnce(raw)))
+    debugLog('candidates', rawCandidates.length, 'view-once', found.length,
+      'with-key', found.filter(item => hasMediaKey(item.detected.media)).length)
     let { recovered, lastError } = await attempt(socket, found)
     if (!recovered && worthResending(found, lastError)) {
       // New WhatsApp builds send linked devices only an "unavailable"
       // view-once stub and strip media fields from a quote. Ask the primary
       // phone to resend the original stanza, then retry with the full message.
+      debugLog('requesting resend', key.id, 'reason=' + (lastError?.code || statusCode(lastError) || 'none'))
       const resent = await requestOriginal(socket, key)
-      if (resent) {
-        found = foundFrom([asRaw(resent, key)], true)
+      debugLog('resend state', resent.state)
+      if (resent.state === 'resent' && resent.raw) {
+        found = foundFrom([asRaw(resent.raw, key)], true)
         ;({ recovered, lastError } = await attempt(socket, found))
+      } else if (resent.state === 'stub') {
+        lastError = Object.assign(Error('Phone resent a stub'), { code: 'KK_RESENT_STUB' })
+      } else if (resent.state === 'no-answer') {
+        lastError = Object.assign(Error('Phone did not answer'), { code: 'KK_NO_ANSWER' })
       }
     }
     if (!recovered) {

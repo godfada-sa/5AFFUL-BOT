@@ -1,5 +1,8 @@
 'use strict'
 
+// Keep the resend windows short so the phone-silence cases stay fast.
+process.env.SAFFUL_KK_RESEND_MS = '1000'
+
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
@@ -228,6 +231,65 @@ test('kk falls back to a raw PDO request when the socket exposes no resend helpe
   await h.unwrap(h.message, '')
   assert.equal(request.peerDataOperationRequestType, 4)
   assert.equal(request.placeholderMessageResendRequest[0].messageKey.id, h.key.id)
+  assert.deepEqual(h.sent[0].payload.image, plaintext)
+})
+
+test('kk reports a phoneless answer honestly instead of a generic missing key', async t => {
+  const h = harness()
+  t.mock.method(global, 'fetch', async () => { throw Error('must not fetch without keys') })
+  const stripped = { key: h.key, message: { viewOnceMessageV2: { message: {
+    imageMessage: { viewOnce: true, caption: 'hello' },
+  } } } }
+  h.message.quoted = stripped
+  const listeners = new Set()
+  h.socket.ev = {
+    on: (name, fn) => { if (name === 'messages.upsert') listeners.add(fn) },
+    off: (name, fn) => { if (name === 'messages.upsert') listeners.delete(fn) },
+  }
+  h.socket.requestPlaceholderResend = async () => {
+    setTimeout(() => { for (const listener of listeners) listener({ messages: [stripped] }) }, 10)
+    return 'request-id'
+  }
+  await h.unwrap(h.message, '')
+  assert.equal(h.sent[0].to, sudo)
+  assert.match(h.sent[0].payload.text, /without a media key/)
+  assert.equal(h.replies.length, 0)
+  assert.equal(listeners.size, 0)
+})
+
+test('kk reports phone silence separately and asks twice before giving up', async t => {
+  const h = harness()
+  t.mock.method(global, 'fetch', async () => { throw Error('must not fetch without keys') })
+  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
+    imageMessage: { viewOnce: true },
+  } } } }
+  h.socket.ev = { on: () => {}, off: () => {} }
+  let calls = 0
+  h.socket.requestPlaceholderResend = async () => { calls += 1; return 'request-id' }
+  await h.unwrap(h.message, '')
+  assert.equal(calls, 2, 'asks the phone again before reporting silence')
+  assert.match(h.sent[0].payload.text, /did not answer the resend request/)
+  assert.equal(h.replies.length, 0)
+})
+
+test('kk clears a resend Baileys already queued so the request still reaches the phone', async t => {
+  const h = harness(), bytes = await encrypted()
+  t.mock.method(global, 'fetch', async () => new Response(bytes))
+  h.message.quoted = { key: h.key, message: { viewOnceMessageV2: { message: {
+    imageMessage: { viewOnce: true },
+  } } } }
+  const listeners = new Set(), deleted = []
+  h.socket.ev = {
+    on: (name, fn) => { if (name === 'messages.upsert') listeners.add(fn) },
+    off: (name, fn) => { if (name === 'messages.upsert') listeners.delete(fn) },
+  }
+  h.socket.placeholderResendCache = { del: async id => { deleted.push(id) } }
+  h.socket.requestPlaceholderResend = async () => {
+    setTimeout(() => { for (const listener of listeners) listener({ messages: [h.original()] }) }, 10)
+    return undefined
+  }
+  await h.unwrap(h.message, '')
+  assert.deepEqual(deleted, [h.key.id])
   assert.deepEqual(h.sent[0].payload.image, plaintext)
 })
 
